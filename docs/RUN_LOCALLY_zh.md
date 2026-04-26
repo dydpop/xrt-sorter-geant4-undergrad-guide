@@ -42,17 +42,71 @@ export CMAKE_PREFIX_PATH=/path/to/geant4-install:$CMAKE_PREFIX_PATH
 或在配置时写：
 
 ```bash
-cmake -DGeant4_DIR=/path/to/geant4-install/lib/Geant4-11.x.x -S . -B build
+cmake -DGeant4_DIR=/path/to/geant4-install/lib/cmake/Geant4 -S . -B build
 ```
 
-## 3. 获取代码
+## 3. VS Code 和本机配置建议
+
+VS Code 的 CMake 插件不是 Geant4 本身。插件只是调用 CMake；真正让项目能配置成功的是让 CMake 找到 Geant4 的 `Geant4Config.cmake`。
+
+推荐做法是把个人电脑上的 Geant4 路径放在本机配置里，而不是直接写进公开仓库。这样有几个好处：
+
+- 本机以后不用每次都手写 `-DGeant4_DIR=...`，VS Code 和命令行都能直接配置项目。
+- 公开仓库不会暴露个人电脑路径，也不会让其他组员误用你的路径。
+- 每个组员可以按自己的安装位置设置 Geant4，仓库本身保持通用。
+- 后续调试时更稳定，问题会集中在代码或依赖版本上，而不是每次都卡在“找不到 Geant4”。
+
+如果你使用 VS Code CMake Tools，可以在自己电脑上创建本地文件 `CMakeUserPresets.json`。这个文件建议只保留在本机，不提交到 Git：
+
+```json
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "local-geant4",
+      "displayName": "Local Geant4",
+      "generator": "Unix Makefiles",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "RelWithDebInfo",
+        "Geant4_DIR": "/path/to/geant4-install/lib/cmake/Geant4"
+      },
+      "environment": {
+        "CMAKE_PREFIX_PATH": "/path/to/geant4-install"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "local-geant4",
+      "configurePreset": "local-geant4"
+    }
+  ]
+}
+```
+
+然后运行：
+
+```bash
+cmake --preset local-geant4
+cmake --build --preset local-geant4
+```
+
+如果你不想让本机配置进入 Git，可以把下面内容加入 `.git/info/exclude`：
+
+```text
+.vscode/
+CMakeUserPresets.json
+```
+
+## 4. 获取代码
 
 ```bash
 git clone https://github.com/adgjlqetuozcbm/xrt-sorter-geant4-undergrad-guide.git
 cd xrt-sorter-geant4-undergrad-guide
 ```
 
-## 4. 编译 C++ 仿真程序
+## 5. 编译 C++ 仿真程序
 
 ```bash
 cmake -S . -B build
@@ -67,7 +121,7 @@ test -x build/xrt_sorter && echo "xrt_sorter build ok"
 
 如果你在 Windows 原生命令行运行，生成文件名可能带 `.exe`。新手优先建议使用 WSL 或 Linux 环境。
 
-## 5. 先跑一个材料做烟雾测试
+## 6. 先跑一个材料做烟雾测试
 
 这一步只检查程序能否启动，不用于生成完整分类结果：
 
@@ -88,7 +142,7 @@ ls build/xrt_real_source_quartz_metadata.json
 
 其中 `*_events.csv` 是分类脚本需要的事件表，`*_hits.csv` 是命中明细，`*_metadata.json` 是该次运行的配置摘要。
 
-## 6. 跑完整六材料公开复现配置
+## 7. 跑完整六材料公开复现配置
 
 分类脚本需要六种材料的事件 CSV。请从仓库根目录执行：
 
@@ -119,7 +173,7 @@ ls build/xrt_real_source_*_events.csv
 - `xrt_real_source_hematite_events.csv`
 - `xrt_real_source_magnetite_events.csv`
 
-## 7. 运行基础分类
+## 8. 运行基础分类
 
 ```bash
 python analysis/classify_absorption_groups.py
@@ -135,7 +189,7 @@ python analysis/classify_absorption_groups.py
 
 公开仓库已经提供整理好的结果表在 `results/`。如果你暂时没有跑通 Geant4，也可以先读 `results/absorption_group_classification_summary.csv` 和 `figures/elementary_absorption_accuracy.png`。
 
-## 8. 常见错误
+## 9. 常见错误
 
 ### 找不到 Geant4
 
@@ -162,7 +216,7 @@ FileNotFoundError: xrt_real_source_quartz_events.csv
 
 处理：
 
-- 先跑第 6 节的六材料仿真。
+- 先跑第 7 节的六材料仿真。
 - 确认当前目录是仓库根目录，而不是 `build/`。
 - 确认 `build/xrt_real_source_*_events.csv` 至少有六个文件。
 
@@ -188,7 +242,7 @@ python -m pip install pandas scikit-learn
 - 查看终端中的 `XRT Research Run Summary`。
 - 检查对应的 `build/*_metadata.json` 是否记录了正确材料和事件数。
 
-## 9. 不想跑也可以怎么学
+## 10. 不想跑也可以怎么学
 
 如果你的电脑暂时没有 Geant4，按这个顺序学习：
 
