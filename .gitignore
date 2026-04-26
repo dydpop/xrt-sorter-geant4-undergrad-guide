@@ -1,0 +1,16 @@
+build/
+*.o
+*.so
+*.dll
+*.exe
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+analysis/results/raw_runs/
+analysis/results/absorption_group_virtual_samples.csv
+analysis/results/absorption_group_classification_summary.csv
+analysis/results/absorption_group_confusion_threshold.csv
+analysis/results/absorption_group_confusion_logistic_1f.csv
+analysis/results/absorption_group_confusion_logistic_3f.csv

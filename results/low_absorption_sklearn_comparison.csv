@@ -1,0 +1,16 @@
+feature_set,model,n_features,accuracy
+A_transmission_only,LogisticRegression,1,0.6266666666666667
+A_transmission_only,SVM_RBF,1,0.6266666666666667
+A_transmission_only,RandomForest,1,0.6
+B_transmission_plus_meanE,LogisticRegression,2,0.6666666666666666
+B_transmission_plus_meanE,SVM_RBF,2,0.64
+B_transmission_plus_meanE,RandomForest,2,0.6133333333333333
+C_transmission_plus_energy_windows,LogisticRegression,4,0.6
+C_transmission_plus_energy_windows,SVM_RBF,4,0.6533333333333333
+C_transmission_plus_energy_windows,RandomForest,4,0.6266666666666667
+D_transmission_meanE_spatial,LogisticRegression,5,0.6533333333333333
+D_transmission_meanE_spatial,SVM_RBF,5,0.6133333333333333
+D_transmission_meanE_spatial,RandomForest,5,0.6266666666666667
+E_all_features,LogisticRegression,8,0.6533333333333333
+E_all_features,SVM_RBF,8,0.56
+E_all_features,RandomForest,8,0.6533333333333333

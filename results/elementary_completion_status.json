@@ -1,0 +1,13 @@
+{
+  "status": "UNDERGRADUATE_PROJECT_READY",
+  "project_level": "undergraduate simulation and baseline classification",
+  "best_absorption_group_accuracy": 0.98,
+  "claim_boundary": "simulated coarse absorption-group classification only",
+  "public_package": true,
+  "core_outputs": [
+    "Geant4 XRT simulation prototype",
+    "CSV event data workflow",
+    "Python baseline classification",
+    "figures and undergraduate documentation"
+  ]
+}

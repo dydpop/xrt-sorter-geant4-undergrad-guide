@@ -1,0 +1,7 @@
+material_name,formula,density_g_cm3,category,notes
+Quartz,SiO2,2.65,low_absorption,baseline_silicate
+Calcite,CaCO3,2.71,low_absorption,carbonate
+Orthoclase,KAlSi3O8,2.56,low_absorption,feldspar
+Hematite,Fe2O3,5.26,high_absorption,iron_ore
+Magnetite,Fe3O4,5.17,high_absorption,iron_ore
+Pyrite,FeS2,5.00,high_absorption_optional,sulfide_optional

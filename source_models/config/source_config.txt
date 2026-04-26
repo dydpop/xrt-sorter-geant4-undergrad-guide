@@ -1,0 +1,25 @@
+# source mode:
+#   spectrum_collimated
+#   phase_space
+source_mode = spectrum_collimated
+
+# spectrum file (used in spectrum_collimated mode)
+spectrum_file = ../source_models/spectra/w_target_120kV_1mmAl.csv
+
+# phase-space file (used in phase_space mode)
+phase_space_file = ../source_models/phase_space/source_phase_space.csv
+
+# source position
+source_x_cm = -30.0
+source_y_mm = 0.0
+source_z_mm = 0.0
+
+# beam shape for spectrum_collimated mode
+beam_type = rectangular
+beam_half_y_mm = 5.0
+beam_half_z_mm = 5.0
+
+# beam direction
+dir_x = 1.0
+dir_y = 0.0
+dir_z = 0.0

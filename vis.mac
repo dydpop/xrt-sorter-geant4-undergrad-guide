@@ -1,0 +1,20 @@
+/vis/open OGL
+/vis/viewer/set/autoRefresh false
+/vis/verbose errors
+
+/vis/drawVolume
+/vis/viewer/set/style surface
+/vis/viewer/set/hiddenMarker true
+/vis/viewer/set/viewpointThetaPhi 70 20
+/vis/viewer/zoom 1.4
+
+/vis/scene/add/axes 0 0 0 20 cm
+/vis/scene/add/text2D 0.03 0.95 18 ! ! xrt_sorter MVP
+
+/vis/scene/add/trajectories smooth
+/tracking/storeTrajectory 1
+/vis/scene/endOfEventAction accumulate 10
+
+/vis/viewer/set/autoRefresh true
+/vis/viewer/refresh
+/vis/verbose warnings

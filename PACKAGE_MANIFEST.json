@@ -1,0 +1,362 @@
+{
+  "package_name": "xrt-sorter-geant4-undergrad-guide",
+  "generated_on": "2026-04-26",
+  "purpose": "Public undergraduate Geant4 XRT simulation guide package for project-team learning, review, and local reproduction.",
+  "visibility_target": "public",
+  "license_policy": "custom all-rights-reserved learning/review permission; see LICENSE.md and NOTICE.md",
+  "claim_boundary": "simulation-only undergraduate package; 0.98 accuracy is limited to simulated coarse absorption-group classification",
+  "sections": {
+    "source_code": [
+      "include/",
+      "src/",
+      "exampleB1.cc",
+      "CMakeLists.txt"
+    ],
+    "configuration": [
+      "source_models/",
+      "analysis/configs/run_research.mac"
+    ],
+    "analysis": [
+      "analysis/classify_absorption_groups.py"
+    ],
+    "results_and_figures": [
+      "results/",
+      "figures/"
+    ],
+    "team_guides": [
+      "README.md",
+      "docs/"
+    ],
+    "paper_materials": [
+      "paper/"
+    ]
+  },
+  "file_count": 65,
+  "files": [
+    {
+      "path": ".gitignore",
+      "size_bytes": 395,
+      "sha256": "20d0f7e050217cf9ed4535716f86f3ed4b20e1503203d7f2093e2dbd04c1493f"
+    },
+    {
+      "path": "CMakeLists.txt",
+      "size_bytes": 797,
+      "sha256": "63c6b16f28d689aade5eb0160bece50e16b8efebeff8c9332a1c82f2c6021ae3"
+    },
+    {
+      "path": "GNUmakefile",
+      "size_bytes": 420,
+      "sha256": "482b5bcd0ffb2bd27ada816c4b54df41b0b3bf2695f03864a665a6e7cbb047b1"
+    },
+    {
+      "path": "LICENSE.md",
+      "size_bytes": 980,
+      "sha256": "350d9be278dc0108227b695c097fdaf92a4654a8bc816f4e9c88c1a30f9984ec"
+    },
+    {
+      "path": "NOTICE.md",
+      "size_bytes": 798,
+      "sha256": "4708d5ea93ff6c591b94db8a9a193988f14e2607b7d92d456b5fd9ba4600d456"
+    },
+    {
+      "path": "README.md",
+      "size_bytes": 4617,
+      "sha256": "f84f55fc750e124da071434ab96ed848ec15be166333558ad346de321f6ef2aa"
+    },
+    {
+      "path": "analysis/classify_absorption_groups.py",
+      "size_bytes": 6725,
+      "sha256": "eae705fc132b51050ddc4e27c79bb5ce3903cc7256ece14dd4271c6ef50501ec"
+    },
+    {
+      "path": "analysis/configs/run_research.mac",
+      "size_bytes": 105,
+      "sha256": "101334bb43ff813e72dd34c8095031d18f5acd8ed1705e7cf440b5bf5423a53b"
+    },
+    {
+      "path": "docs/FILE_MAP_zh.md",
+      "size_bytes": 3133,
+      "sha256": "479001cb194aa1de55fde4cc0afb924d3a6ed618eed54a706a4778a2c7febcd0"
+    },
+    {
+      "path": "docs/FINAL_ELEMENTARY_REVIEW_zh.md",
+      "size_bytes": 2410,
+      "sha256": "5d3f3ea7fd72390d6a3d2b077e93e56e9e3a64df452b43fd1833600cbd96860b"
+    },
+    {
+      "path": "docs/GLOSSARY_BY_FIRST_APPEARANCE.md",
+      "size_bytes": 6016,
+      "sha256": "d1a50f1e7fa77d1e51a19e9811685675c3d3bdb4e96842797eedfed3db3eb7f0"
+    },
+    {
+      "path": "docs/RUN_LOCALLY_zh.md",
+      "size_bytes": 5315,
+      "sha256": "01d5bab088d788718c0aaecf3cb3f599ba4ecd01942a48910908a8b0ebab15c7"
+    },
+    {
+      "path": "docs/TEAM_GUIDE_zh.md",
+      "size_bytes": 5065,
+      "sha256": "a88617f84944b7f1be3c335985a91f2cbcf3b6e1588dce2039e9ab7059c97a36"
+    },
+    {
+      "path": "docs/public_explainer_zh.md",
+      "size_bytes": 2870,
+      "sha256": "e483a1928bcd9a3ad721704998ee61495d5b8ee2eaee600e98e5a015853ec8ce"
+    },
+    {
+      "path": "exampleB1.cc",
+      "size_bytes": 1348,
+      "sha256": "8e23dd1dcc9f98d66c5cccb787d2fd9b88b5d6a719acb54332a5526e61b1eeaa"
+    },
+    {
+      "path": "figures/elementary_absorption_accuracy.png",
+      "size_bytes": 49969,
+      "sha256": "756542bd7e621be90244912c6dca0d15e4beb96f658e379465796385ddf9f573"
+    },
+    {
+      "path": "figures/elementary_backup_tiers.png",
+      "size_bytes": 32802,
+      "sha256": "c77fad95b0cf0c977a81e2733e99900d39e355c4203749f52e6a22a95a87e0a7"
+    },
+    {
+      "path": "figures/elementary_direct_scatter_ratio.png",
+      "size_bytes": 41905,
+      "sha256": "d256b233454c979d690c7badf54b4f6cc03b78b9712d0352089f1fc3830485a5"
+    },
+    {
+      "path": "figures/elementary_system_flow.png",
+      "size_bytes": 45219,
+      "sha256": "dd69036093be6ef9148252031e32bae582489159b383f3f0e40322693a69e868"
+    },
+    {
+      "path": "figures/elementary_xray_spectrum.png",
+      "size_bytes": 83121,
+      "sha256": "c20e101ba51d6cb0abd66eb7e0bf605ec94ce0b5f085de1a0113d1987d3ee915"
+    },
+    {
+      "path": "include/ActionInitialization.hh",
+      "size_bytes": 2284,
+      "sha256": "5bae29710d53e617db861621d4177a5e4f8d81e1b68412513d2fd90612543d2e"
+    },
+    {
+      "path": "include/DetectorConstruction.hh",
+      "size_bytes": 478,
+      "sha256": "7496a280959f750c2eaff5ae4e8deb8c74b90fe3d6e114d9e5582150c3a35eec"
+    },
+    {
+      "path": "include/EventAction.hh",
+      "size_bytes": 1134,
+      "sha256": "3e0708097e8d296d8e558a4cf4ac3a099b3df14db0cf033a076008b0b01e21d3"
+    },
+    {
+      "path": "include/ExperimentConfig.hh",
+      "size_bytes": 2472,
+      "sha256": "d6d764ab36bd2ae93847942243908443943c8201ef84c91cc77cb49fb883f5bd"
+    },
+    {
+      "path": "include/PrimaryGeneratorAction.hh",
+      "size_bytes": 1209,
+      "sha256": "5c0eb117f8c8da459be783a3dae21cba4d2124b3f08b464a4e8960ced26ae28f"
+    },
+    {
+      "path": "include/RunAction.hh",
+      "size_bytes": 1587,
+      "sha256": "ee22d9ba916db68e26419bde6e4c36e3c02b7b13fb66467fb905d779b401b3f8"
+    },
+    {
+      "path": "include/SteppingAction.hh",
+      "size_bytes": 617,
+      "sha256": "882b982ff2e6ea0c691c063d7826a6227e393cbb0fd6218572dbad59bbfd9b3f"
+    },
+    {
+      "path": "init_vis.mac",
+      "size_bytes": 338,
+      "sha256": "601e0524325fbc33379f017bba6640c65d20c91f0ab25df73c26fc80e8830e6d"
+    },
+    {
+      "path": "paper/abstract_en.md",
+      "size_bytes": 950,
+      "sha256": "7c1311ac485af87664b78519be841ce746f95194a0a4f35e04c4247beca190cc"
+    },
+    {
+      "path": "paper/abstract_zh.md",
+      "size_bytes": 927,
+      "sha256": "7cde4648c3c0e1557c06ad67dff34ccb45066391ac35c5b761539eb5abfba1ec"
+    },
+    {
+      "path": "paper/figure_list.md",
+      "size_bytes": 944,
+      "sha256": "a92129f6e9acad0fe356b5d9d0afc29bfd3f9fd3ce4dfebd250e7fdbcc282e70"
+    },
+    {
+      "path": "paper/main_thesis_HIT_revised_zh.md",
+      "size_bytes": 4351,
+      "sha256": "83f2182fe40221f8f661fefb5082708e906df60420ddb8af6471942ca7a8459b"
+    },
+    {
+      "path": "paper/references.md",
+      "size_bytes": 486,
+      "sha256": "376c4316d299e5acde71d7d2145e027255afd1addb915ffbda9cf6abbd8de07a"
+    },
+    {
+      "path": "paper/reproducibility.md",
+      "size_bytes": 1932,
+      "sha256": "53f42c5a5c19089ca8e11ac4f919b92320f1e6b2149342e42a197d98fc11ec42"
+    },
+    {
+      "path": "paper/symbols.md",
+      "size_bytes": 463,
+      "sha256": "04c5c9ecd9f308a75f0b2a2c41045f8cc3245ba4aa857c66b89e9ca1125d1e72"
+    },
+    {
+      "path": "results/absorption_group_classification_summary.csv",
+      "size_bytes": 156,
+      "sha256": "e9fd9a0be6659e36c2ba9257199aa13e5e4d2320997df8dfb1240e7fee668631"
+    },
+    {
+      "path": "results/absorption_group_confusion_logistic_1f.csv",
+      "size_bytes": 73,
+      "sha256": "1575afd6ce067871aa694f25b3e91a55a008ddbf39c35bfb10e20f8562805e8b"
+    },
+    {
+      "path": "results/absorption_group_confusion_logistic_3f.csv",
+      "size_bytes": 73,
+      "sha256": "1575afd6ce067871aa694f25b3e91a55a008ddbf39c35bfb10e20f8562805e8b"
+    },
+    {
+      "path": "results/absorption_group_confusion_threshold.csv",
+      "size_bytes": 73,
+      "sha256": "8a450cd5aa6df92d7325d1c00f65915cb94c28f48a88364a025f1cee866708a2"
+    },
+    {
+      "path": "results/directscatter_feature_comparison.csv",
+      "size_bytes": 280,
+      "sha256": "8d9f5b2d46f06d0e4df47742455abafef256524bb11e43449bbd91c3fc3e00af"
+    },
+    {
+      "path": "results/elementary_completion_status.json",
+      "size_bytes": 445,
+      "sha256": "ee1737756bc068e4c111b20ee6cfaadb9ccba3f1c50f08fbef551d69a5353db4"
+    },
+    {
+      "path": "results/elementary_demo_report_zh.md",
+      "size_bytes": 1546,
+      "sha256": "f473e0cc8b3818c581036ad482e7d9d61894a426c3550fa0614c9cf0049ddda3"
+    },
+    {
+      "path": "results/high_absorption_1cm_feature_comparison.csv",
+      "size_bytes": 227,
+      "sha256": "ea9d99cb791b174dc17c508fc6911b68bc2a05c7e92a4e97ce6cc27d34a49b47"
+    },
+    {
+      "path": "results/low_absorption_sklearn_comparison.csv",
+      "size_bytes": 870,
+      "sha256": "7b89a7e5f6c2e3440698bef5a311b3cddf5a18e6306eff39ebf438f191269229"
+    },
+    {
+      "path": "results/real_spectrum_threshold_confusion_matrix.csv",
+      "size_bytes": 114,
+      "sha256": "06176feec23e2357a2e95c18b39cf2b1afc5faee9aa550f5381b3a17074d207b"
+    },
+    {
+      "path": "run1.mac",
+      "size_bytes": 553,
+      "sha256": "30334930175dd61e5108b3aa7e59f828d609115b910fc244196a5e646fd58f9a"
+    },
+    {
+      "path": "run2.mac",
+      "size_bytes": 448,
+      "sha256": "7bba8e4deb5a8eaf2b3d86e16b3bd3ce90ba136eb8cef220f6f41111dcd09e13"
+    },
+    {
+      "path": "source_models/config/experiment_config.txt",
+      "size_bytes": 1466,
+      "sha256": "b731caa61a048edb8d58a6d8cd351c3655198ce51c0f1c2245ec5bab60db80b5"
+    },
+    {
+      "path": "source_models/config/source_config.txt",
+      "size_bytes": 562,
+      "sha256": "7986b3649b8d88bb180b69e0e6f6b3a31296b33029dee6ed9b15660d87a5b6ca"
+    },
+    {
+      "path": "source_models/config/undergrad_batch/calcite.txt",
+      "size_bytes": 1168,
+      "sha256": "0af2e8726fefea08852fc3c2fd91a59af55db1e91fcb5b78da857823188e96cd"
+    },
+    {
+      "path": "source_models/config/undergrad_batch/hematite.txt",
+      "size_bytes": 1173,
+      "sha256": "0c12b2cef6036282c8b44da4081d7ae5069a1a99bdc6ba08a2a400c675fcbde9"
+    },
+    {
+      "path": "source_models/config/undergrad_batch/magnetite.txt",
+      "size_bytes": 1178,
+      "sha256": "6dc5ad3c380ed8ae3662b3370bbe41203d33ad482713b14fa960e7ebb2c784a6"
+    },
+    {
+      "path": "source_models/config/undergrad_batch/orthoclase.txt",
+      "size_bytes": 1183,
+      "sha256": "871aae182f2de53873d6d85c62c5c749c69f234766f9b288ec685564c86ef2fb"
+    },
+    {
+      "path": "source_models/config/undergrad_batch/pyrite.txt",
+      "size_bytes": 1163,
+      "sha256": "a08d4aeae595a4add0cc084757d7c6fda5e81f1758b41f8bd0d3573e57f718b0"
+    },
+    {
+      "path": "source_models/config/undergrad_batch/quartz.txt",
+      "size_bytes": 1163,
+      "sha256": "0f1f7dc86a4c87634c315f7c1664a2cf2ddc637ac46234c303bc5ea1fb816e16"
+    },
+    {
+      "path": "source_models/materials/material_catalog.csv",
+      "size_bytes": 343,
+      "sha256": "10ba0486a0685c053be50a05be5dfe621cadbad20651cbbe9abecf5d7182e93d"
+    },
+    {
+      "path": "source_models/spectra/w_target_120kV_1mmAl.csv",
+      "size_bytes": 3153,
+      "sha256": "c7c39f6149630679890c7fd013f4c5e983d3a462b00b60c8bce8c7c647a02242"
+    },
+    {
+      "path": "src/ActionInitialization.cc",
+      "size_bytes": 777,
+      "sha256": "f4c5d38163deba2163201307140a55d2ca5c3850a208466d180ec460bce04a7e"
+    },
+    {
+      "path": "src/DetectorConstruction.cc",
+      "size_bytes": 9897,
+      "sha256": "8019aa5c4c1e7546bec99f0f6a71ebbab5b69c741ae2d4502966f05a2e190238"
+    },
+    {
+      "path": "src/EventAction.cc",
+      "size_bytes": 1420,
+      "sha256": "aae487b0b4e06206692ca74287326b7aceac660c389d609caf1a49d27547eb68"
+    },
+    {
+      "path": "src/ExperimentConfig.cc",
+      "size_bytes": 11380,
+      "sha256": "85e8f249c25856fe8a79748c7518ab9262533643b072ef9eb153cd55cc5fb5c6"
+    },
+    {
+      "path": "src/PrimaryGeneratorAction.cc",
+      "size_bytes": 6511,
+      "sha256": "7d00953e08ba92ce1d84026ab0d3b860fa0b630d95e9de013ab1de1482dca361"
+    },
+    {
+      "path": "src/RunAction.cc",
+      "size_bytes": 9191,
+      "sha256": "2288b6902eb327cdd5d23088a4b4226e649c01ee2a278b064de50cf9c4fb3468"
+    },
+    {
+      "path": "src/SteppingAction.cc",
+      "size_bytes": 2854,
+      "sha256": "0500a59715f67ac9714c9a63cd00b30dc3f9a6f245965c73c51697bcfd7f4464"
+    },
+    {
+      "path": "vis.mac",
+      "size_bytes": 478,
+      "sha256": "da48ebbf4148f276f0daa3c0352168d9cfff3a517d970976c8b2e8d0bda0fb84"
+    }
+  ]
+}

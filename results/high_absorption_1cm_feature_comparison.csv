@@ -1,0 +1,6 @@
+feature_set,n_features,accuracy
+A_transmission_only,1,0.44
+B_transmission_plus_meanE,2,0.38666666666666666
+C_transmission_plus_energy_windows,4,0.44
+D_transmission_plus_directscatter,3,0.41333333333333333
+E_all_features,7,0.44
