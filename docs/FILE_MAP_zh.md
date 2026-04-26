@@ -1,90 +1,99 @@
 # 文件地图
 
-这份文件解释公开仓库里每个目录和关键文件的用途。第一次阅读建议先看 `README.md` 和 `docs/TEAM_GUIDE_zh.md`，再用本文件定位证据和代码。
+这份文件说明仓库里每个主要目录在证据链中的位置。读代码时建议先按“输入配置 -> Geant4 输出 -> Python 分析 -> 结果证据 -> 文档表达”的顺序理解，而不是只按文件夹字母顺序浏览。
 
-## 顶层文件
+## 1. 总览
 
-| 文件 | 用途 |
+```text
+include/              Geant4 C++ 头文件
+src/                  Geant4 C++ 实现
+source_models/        材料目录、源项、能谱和批量配置
+analysis/             Python 分析脚本和 Geant4 run 宏
+results/              公开验证证据包
+figures/              论文和 README 使用的图
+docs/                 队友入门、运行说明、文件地图、术语表
+paper/                论文式正文、复现说明、参考文献
+```
+
+## 2. 输入配置层
+
+`source_models/materials/material_catalog.csv` 是当前公开验证的材料索引。它定义材料名、化学式、密度、类别、吸收组标签、配置文件、事件文件和证据状态。Python 脚本会读取这个目录，因此它是“哪些材料进入公开验证”的事实来源。
+
+`source_models/config/undergrad_batch/*.txt` 是每种材料的 Geant4 配置。配置文件指定材料、样本厚度、源项、探测器位置和输出前缀。当前公开验证使用十种单一材料、10 mm slab 和 W 靶 120 kV 能谱。
+
+`source_models/spectra/w_target_120kV_1mmAl.csv` 是 X 射线源项能谱。Geant4 程序按该能谱采样 photon energy，而不是使用单一固定能量。
+
+## 3. Geant4 仿真层
+
+`include/` 和 `src/` 包含 C++ 仿真程序。你可以按下面的角色理解核心文件：
+
+| 组件 | 作用 |
 | --- | --- |
-| `README.md` | GitHub 首页，负责快速展示项目成果、图文导览、运行入口和边界声明。 |
-| `LICENSE.md` | 权利声明：保留权利，不给公开复用授权。 |
-| `NOTICE.md` | 使用提醒：组员可学习运行，但不能盗用或冒名发布。 |
-| `PACKAGE_MANIFEST.json` | 公开包文件清单，用于检查发布内容是否完整。 |
-| `CMakeLists.txt` | CMake 构建配置，用来编译 Geant4 程序。 |
-| `GNUmakefile` | 旧式 make 入口，保留给熟悉 make 的读者。 |
-| `exampleB1.cc` | C++ 程序主入口，启动 Geant4、物理过程、可视化和运行宏。 |
-| `*.mac` | Geant4 宏文件，用于初始化、可视化或批量运行。 |
+| `DetectorConstruction` | 定义世界体、矿物样本、探测器几何和材料 |
+| `PrimaryGeneratorAction` | 按配置文件生成 gamma 源项 |
+| `SteppingAction` | 记录进入探测器的 gamma 命中、能量、位置、偏转角和 primary 标记 |
+| `EventAction` | 每个事件结束时汇总探测器响应 |
+| `RunAction` | 管理 CSV、metadata 和 run 级统计输出 |
 
-## 讲解、运行、论文、开发入口
+Geant4 运行后会在 `build/` 下生成 `*_events.csv`、`*_hits.csv` 和 metadata。`build/` 是本机生成目录，不提交 Git；仓库提交的是可复现配置、脚本和紧凑结果证据。
 
-| 类型 | 推荐文件 | 新手是否需要打开 |
+## 4. Python 分析层
+
+`analysis/configs/run_research.mac` 控制 Geant4 run 的宏命令，当前核心命令为 `/run/beamOn 5000`。
+
+`analysis/classify_absorption_groups.py` 是公开验证的核心分析脚本。它完成材料目录读取、事件 CSV 检查、事件聚合、样本级特征计算、训练/测试拆分、阈值法、Logistic Regression、accuracy、confusion matrix 和 manifest 输出。
+
+脚本当前使用的主要特征是：
+
+| 特征 | 来源 | 含义 |
 | --- | --- | --- |
-| 讲解入口 | `docs/TEAM_GUIDE_zh.md`, `docs/GLOSSARY_BY_FIRST_APPEARANCE.md`, `docs/public_explainer_zh.md` | 必须读 |
-| 运行入口 | `docs/RUN_LOCALLY_zh.md`, `analysis/configs/run_research.mac`, `source_models/config/undergrad_batch/*.txt` | 准备复现时读 |
-| 论文入口 | `paper/main_thesis_HIT_revised_zh.md`, `paper/reproducibility.md`, `paper/references.md` | 写论文/答辩时读 |
-| 开发入口 | `exampleB1.cc`, `include/`, `src/`, `analysis/classify_absorption_groups.py` | 需要改代码时读 |
-| 证据入口 | `results/undergrad_validation/`, `figures/` | 必须会查 |
+| `primary_transmission_rate` | `primary_gamma_entries` / event 数 | 主 gamma 透射率 |
+| `mean_detector_edep_keV` | `detector_edep_keV` 平均值 | 平均探测器能量沉积 |
+| `detector_gamma_rate` | `detector_gamma_entries` / event 数 | 探测器 gamma 命中率 |
 
-## C++ 仿真代码
+## 5. 结果证据层
 
-| 路径 | 用途 |
+`results/undergrad_validation/` 是当前公开结果的核心证据包。
+
+| 文件 | 作用 |
 | --- | --- |
-| `include/` | C++ 头文件，声明几何、源项、运行、事件和步进逻辑。 |
-| `src/` | C++ 实现文件，定义仿真几何、材料、数据输出和事件处理。 |
-| `src/DetectorConstruction.cc` | 构造世界体、矿物样本和探测器。 |
-| `src/PrimaryGeneratorAction.cc` | 读取源项配置并生成 gamma。 |
-| `src/SteppingAction.cc` | 在粒子进入探测器时记录命中、能量、偏转角和 primary 标记。 |
-| `src/EventAction.cc` | 在每个 event 结束时汇总事件级数据。 |
-| `src/RunAction.cc` | 创建 CSV、写事件表、写命中表和 metadata。 |
+| `event_row_summary.csv` | 检查每种材料事件行数、重复事件和尾部丢弃事件 |
+| `absorption_group_virtual_samples.csv` | 每 100 个 event 聚合后的 500 个虚拟样本 |
+| `train_test_split_samples.csv` | 每个虚拟样本属于训练集还是测试集 |
+| `feature_group_summary.csv` | 低/高吸收组在训练/测试中的特征分布 |
+| `material_feature_summary.csv` | 每种材料的特征统计 |
+| `absorption_group_classification_summary.csv` | 三种方法的测试集 accuracy |
+| `absorption_group_confusion_*.csv` | 混淆矩阵 |
+| `test_predictions.csv` | 每个测试样本的预测结果 |
+| `validation_manifest.json` | 材料、样本政策、软件版本、结论边界 |
 
-## 配置和物理输入
+如果论文或 README 中的数字和这些文件不一致，以 `results/undergrad_validation/` 为准。
 
-| 路径 | 用途 |
-| --- | --- |
-| `source_models/config/experiment_config.txt` | 默认实验配置示例。 |
-| `source_models/config/undergrad_batch/` | 十材料公开复现配置，输出文件名与材料目录和 Python 分类脚本匹配。 |
-| `source_models/config/source_config.txt` | 源项配置示例。 |
-| `source_models/materials/material_catalog.csv` | 矿物材料表，记录材料名称、化学式、密度、分组标签、配置文件和证据状态，是 Python 分类脚本读取的材料索引。 |
-| `source_models/spectra/w_target_120kV_1mmAl.csv` | W 靶 120 kV X 射线能谱。 |
+## 6. 文档表达层
 
-## Python 分析
+`README.md` 是仓库入口，负责用最短路径说明项目是什么、如何读、结果是什么、边界是什么。
 
-| 路径 | 用途 |
-| --- | --- |
-| `analysis/classify_absorption_groups.py` | 读取材料目录启用的事件 CSV，构造虚拟样本，划分训练/测试集，运行阈值法和 Logistic Regression，并生成验证证据包。 |
-| `analysis/configs/run_research.mac` | 批量仿真运行宏，核心命令为 `/run/beamOn 5000`。 |
+`docs/TEAM_GUIDE_zh.md` 写给没有参与过项目的队友，重点解释数据从哪里来、如何清洗、如何构造特征、模型是什么、accuracy 怎么来、哪些话不能说。
 
-运行 Python 分类前，需要先通过 Geant4 在 `build/` 目录下生成材料目录启用的十个 `xrt_real_source_*_events.csv` 文件。
+`docs/RUN_LOCALLY_zh.md` 写给要复现的人，重点说明环境、构建、十材料运行、Python 分析和结果检查。
 
-## 结果和图表
+`docs/GLOSSARY_BY_FIRST_APPEARANCE.md` 解释术语，避免组员因为 Geant4、XRT、event、primary gamma、Logistic Regression 等词卡住。
 
-| 路径 | 用途 |
-| --- | --- |
-| `results/undergrad_validation/validation_manifest.json` | 当前证据包的总说明，记录材料、样本政策、训练/测试规模、软件版本和边界。 |
-| `results/undergrad_validation/event_row_summary.csv` | 十材料事件行数检查，每种材料 5000 events。 |
-| `results/undergrad_validation/absorption_group_virtual_samples.csv` | 500 个虚拟样本表，每 100 个 event 聚合成一个样本。 |
-| `results/undergrad_validation/train_test_split_samples.csv` | 每个虚拟样本的训练/测试归属。 |
-| `results/undergrad_validation/material_feature_summary.csv` | 按材料统计透射率、能量沉积和 gamma 命中率，便于解释材料差异。 |
-| `results/undergrad_validation/absorption_group_classification_summary.csv` | 分类方法汇总，包含测试样本数、正确数和 accuracy。 |
-| `results/undergrad_validation/*confusion*.csv` | 混淆矩阵，显示分类错在低吸收组还是高吸收组。 |
-| `results/undergrad_validation/test_predictions.csv` | 测试集逐样本预测结果。 |
-| `results/absorption_group_classification_summary.csv` | 兼容入口结果表，方便只打开 `results/` 的读者快速查看。 |
-| `results/directscatter_feature_comparison.csv` | 直接/散射相关特征对比。 |
-| `results/elementary_demo_report_zh.md` | 本科级演示报告。 |
-| `figures/` | README 和论文可直接引用的图。 |
+`docs/public_explainer_zh.md` 是最短的通俗讲解，适合发给只想快速知道项目做了什么的人。
 
-## 文档
+`docs/FINAL_ELEMENTARY_REVIEW_zh.md` 是最终边界复核，适合在答辩或交接前检查哪些表述可以说、哪些表述不能说。
 
-| 路径 | 用途 |
-| --- | --- |
-| `docs/TEAM_GUIDE_zh.md` | 给零基础组员看的主指南，解释数据、变量、训练/测试拆分和结果边界。 |
-| `docs/GLOSSARY_BY_FIRST_APPEARANCE.md` | 按首次出现顺序排列的术语表。 |
-| `docs/RUN_LOCALLY_zh.md` | 本机运行步骤和排错。 |
-| `docs/public_explainer_zh.md` | 更通俗的讲解文章。 |
-| `paper/main_thesis_HIT_revised_zh.md` | 本科论文式主文档。 |
-| `paper/reproducibility.md` | 论文式复现说明。 |
-| `paper/references.md` | 参考文献。 |
+`paper/main_thesis_HIT_revised_zh.md` 是论文式正文，适合导师审阅和答辩准备。它比 README 更正式，比队友指南更像完整论文。
 
-## 不在公开仓库里的内容
+## 7. 新增材料时要改哪些地方
 
-公开仓库只保留本科级成果，不放内部探索路线、未公开讨论、个人备份路径和不适合组员直接学习的中间材料。`build/`、`.vscode/`、`analysis/__pycache__/` 和 `CMakeUserPresets.json` 属于本机运行产物或本机配置，不作为公开提交内容。
+新增材料不是只改一个 CSV。最小流程是：
+
+1. 在 C++ 中确认或新增 Geant4 材料定义。
+2. 在 `source_models/config/undergrad_batch/` 新建材料配置。
+3. 在 `source_models/materials/material_catalog.csv` 添加材料行。
+4. 运行 Geant4 生成该材料事件 CSV。
+5. 运行 `analysis/classify_absorption_groups.py` 重新生成证据包。
+6. 同步更新 README、论文、队友指南和运行说明中的材料范围与结果数字。
+
+只有新的证据包生成并检查通过后，才能更新对该材料的结论。

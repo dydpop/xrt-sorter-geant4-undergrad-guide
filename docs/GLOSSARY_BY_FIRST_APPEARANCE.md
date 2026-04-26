@@ -1,63 +1,87 @@
-# 术语表：按首次出现顺序排列
+# 术语表
 
-本术语表按 `README.md`、`docs/TEAM_GUIDE_zh.md`、`docs/RUN_LOCALLY_zh.md` 中术语首次出现的大致顺序排列，不按拼音或字母排序。它重点解释术语、英文名、文件命名和项目里的实际变量名。
+这份术语表按项目阅读中常见的概念组织，不追求教科书式完整定义，而是帮助没参与过项目的组员快速看懂仓库、论文和结果表。
 
-| 顺序 | 术语 | 英文/缩写 | 常见文件或变量名 | 大白话解释 |
-| --- | --- | --- | --- | --- |
-| 1 | Geant4 | Geant4 | `G4`, `CMakeLists.txt`, `src/` | 用 C++ 做粒子和材料相互作用仿真的工具包。 |
-| 2 | XRT | X-ray Transmission | `xrt`, `XRT` | X 射线透射，关注射线穿过材料后信号怎样变化。 |
-| 3 | 矿物分选 | mineral sorting | `sorter`, `sorting` | 根据物理信号把不同性质的矿物或矿石分开。 |
-| 4 | 仿真 | simulation | `run`, `simulation` | 在电脑里模拟实验过程，不是直接做真实设备实验。 |
-| 5 | X 射线 | X-ray | `spectrum`, `w_target_120kV` | 能穿透物体的射线，不同材料会造成不同衰减。 |
-| 6 | 矿石样本 | ore sample | `ore`, `ore_primary_material` | 仿真中被 X 射线照射的材料块。 |
-| 7 | 探测器 | detector | `detector`, `hit` | 接收穿过样本后的信号，相当于虚拟传感器。 |
-| 8 | 事件 | event | `event_id`, `events.csv` | 一次粒子发射和传播过程，事件表中通常对应一行。 |
-| 9 | 命中 | hit | `hits.csv`, `RecordDetectorHit` | 粒子进入探测器边界时记录的一次命中。 |
-| 10 | CSV | Comma-Separated Values | `.csv` | 表格文本文件，仿真输出和 Python 分析都使用它。 |
-| 11 | 源项 | source term | `source_mode`, `source_models/` | 描述 X 射线从哪里来、能量如何分布、方向如何设定。 |
-| 12 | W 靶 | tungsten target | `w_target_120kV_1mmAl.csv` | 钨靶 X 射线源的能谱描述。 |
-| 13 | 120 kV | 120 kilovolt | `120kV` | X 射线管电压参数，用来限定能谱范围。 |
-| 14 | 能谱 | spectrum | `spectrum_file` | 不同能量的 X 射线占多少比例。 |
-| 15 | 材料目录 | material catalog | `material_catalog.csv` | 记录材料名称、化学式、密度、分组标签、配置文件、事件文件和证据状态的表格。 |
-| 16 | 十材料配置 | ten-material configs | `undergrad_batch/*.txt` | 当前公开复现配置，包含 5 个低吸收材料和 5 个高吸收材料。 |
-| 17 | `event_id` | event identifier | `event_id` | 仿真事件编号，本次每种材料为 0 到 4999。 |
-| 18 | `detector_edep_keV` | detector energy deposition | `detector_edep_keV` | 当前事件在探测器中沉积的能量，单位 keV。 |
-| 19 | `detector_gamma_entries` | detector gamma entries | `detector_gamma_entries` | 当前事件中 gamma 进入探测器的计数。 |
-| 20 | `primary_gamma_entries` | primary gamma entries | `primary_gamma_entries` | 当前事件中 primary gamma 到达探测器的计数。 |
-| 21 | 虚拟样本 | virtual sample | `sample_id`, `virtual_samples` | 由多个 event 聚合成的分类样本，本项目每 100 个 event 形成一个。 |
-| 22 | `PHOTONS_PER_SAMPLE` | photons per virtual sample | `PHOTONS_PER_SAMPLE = 100` | Python 脚本中的聚合规则，决定每个虚拟样本包含多少 event。 |
-| 23 | `sample_id` | sample identifier | `sample_id` | 虚拟样本编号，由 `event_id // 100` 得到。 |
-| 24 | 吸收组 | absorption group | `low_absorption`, `high_absorption` | 本科任务中的粗粒度标签，分为低吸收组和高吸收组。 |
-| 25 | `group_label` | group label | `group_label` | Python 中的类别标签字段。 |
-| 26 | 主 gamma 透射率 | primary transmission rate | `primary_transmission_rate` | 每个虚拟样本中 primary gamma 到达探测器的比例。 |
-| 27 | 平均探测器能量沉积 | mean detector energy deposition | `mean_detector_edep_keV` | 每个虚拟样本平均每次 event 的探测器能量沉积。 |
-| 28 | 探测器 gamma 命中率 | detector gamma rate | `detector_gamma_rate` | 每个虚拟样本中探测器 gamma 命中的平均比例。 |
-| 29 | 训练集 | training set | `train_df`, `split=train` | 用来确定阈值或拟合模型的样本。本项目每种材料前 25 个样本训练。 |
-| 30 | 测试集 | test set | `test_df`, `split=test` | 用来报告结果的样本。本项目每种材料后 25 个样本测试。 |
-| 31 | 阈值法 | threshold classifier | `A_threshold_transmission_only`, `threshold` | 用训练集计算一个透射率分界值，再按高低判断类别。 |
-| 32 | `threshold` | decision threshold | `threshold` | 低吸收组和高吸收组训练均值的中点。 |
-| 33 | 标准化 | standardization | `StandardScaler` | 把特征缩放到更适合线性模型处理的尺度。 |
-| 34 | Logistic Regression | logistic regression | `LogisticRegression` | 经典二分类方法，用特征学习线性分类边界。 |
-| 35 | accuracy | accuracy | `accuracy_score`, `accuracy` | 测试样本中预测正确的比例。 |
-| 36 | 混淆矩阵 | confusion matrix | `confusion_matrix`, `confusion*.csv` | 显示真实类别和预测类别如何对应的表。 |
-| 37 | 测试集分母 | test denominator | `test_samples` | 当前证据包为 250 个测试虚拟样本，不是 event 数。 |
-| 38 | 近似直接透射 | direct primary | `is_direct_primary` | primary gamma 到达探测器且偏转角小于 1 度的工程近似。 |
-| 39 | 散射后透射 | scattered primary | `is_scattered_primary` | primary gamma 到达探测器但偏转角不小于 1 度的工程近似。 |
-| 40 | CMake | CMake | `cmake`, `CMakeLists.txt` | C++ 项目构建工具，用来生成编译配置。 |
-| 41 | `Geant4_DIR` | Geant4_DIR | `Geant4Config.cmake` | 告诉 CMake Geant4 配置文件在哪个目录。 |
-| 42 | `CMAKE_PREFIX_PATH` | CMAKE_PREFIX_PATH | `CMAKE_PREFIX_PATH` | 告诉 CMake 去哪些安装前缀里找依赖包。 |
-| 43 | 运行宏 | Geant4 macro | `.mac`, `run_research.mac` | Geant4 命令脚本，本项目用它执行 `/run/beamOn 5000`。 |
-| 44 | 验证证据包 | validation package | `results/undergrad_validation/` | 本轮整理出的紧凑证据目录，用于追溯数据规模、拆分和结果。 |
-| 45 | manifest | manifest | `validation_manifest.json` | 记录证据包生成方式、样本政策、软件版本和结论边界的 JSON 文件。 |
-| 46 | 本科级边界 | undergraduate boundary | `claim_boundary` | 说明本项目是仿真和基础分类验证，不是工业设备验证。 |
-| 47 | 物理/化学特征 | physical/chemical descriptors | `formula`, `density_g_cm3`, `primary_transmission_rate` | 用材料组成、密度和仿真响应描述材料，而不是只记住材料名字。 |
-| 48 | 候选检索 | candidate retrieval | material dictionary lookup | 后续研究可以把仿真特征和矿物字典结合，给出候选材料或人工复核线索；当前公开仓库只做本科级验证。 |
+## XRT
 
-## 常见误解
+XRT 是 X-ray Transmission 的缩写，中文可理解为 X 射线透射。它关注 X 射线穿过材料后还剩多少信号。不同材料对 X 射线吸收能力不同，因此透射信号可以用来辅助区分材料。
 
-| 误解 | 正确理解 |
-| --- | --- |
-| 一个 event 就是一个机器学习样本 | 当前项目每 100 个 event 聚合为 1 个虚拟样本。 |
-| `0.9960` 表示所有矿物都能分对 | 它只表示当前十材料、固定几何、仿真数据、粗粒度吸收组测试集上的结果。 |
-| 仿真数据等于真实设备数据 | 仿真能降低探索成本，但不能替代真实设备、真实矿流和现场验证。 |
-| 新增材料只要改词典就够 | 当前至少还需要 C++ 材料定义、配置文件、Geant4 运行和新的证据包。 |
+## Geant4
+
+Geant4 是用于模拟粒子与物质相互作用的工具包。本项目用它模拟 X 射线光子穿过矿物样本，并记录探测器响应。它负责生成仿真数据，不负责自动训练机器学习模型。
+
+## event
+
+event 是一次仿真事件。可以把它理解为一次模拟发射和探测过程。当前每种材料运行 5000 个 event。
+
+## hits.csv
+
+命中级 CSV，记录探测器命中的更细信息，例如命中位置、能量、是否为 primary、偏转角等。它适合用来理解探测器响应细节。
+
+## events.csv
+
+事件级 CSV，每一行对应一个 event。当前机器学习验证主要读取这个文件，因为它更适合做稳定的样本级统计。
+
+## primary gamma
+
+primary gamma 指由源项直接产生的原始 gamma 光子。`primary_gamma_entries` 表示 primary gamma 到达探测器的次数。这个字段与透射率关系很直接，是当前分类验证最重要的数据来源之一。
+
+## detector energy deposition
+
+探测器能量沉积，文件字段为 `detector_edep_keV`。它表示某个事件中探测器吸收到的能量，单位是 keV。Python 会把 100 个 event 的能量沉积求平均，形成 `mean_detector_edep_keV`。
+
+## virtual sample
+
+虚拟样本是 Python 分析中的样本单位。当前规则是每 100 个 event 聚合为 1 个 virtual sample。每种材料 5000 个 event，因此形成 50 个虚拟样本。
+
+## feature
+
+feature 是机器学习使用的特征。本项目的核心特征包括 `primary_transmission_rate`、`mean_detector_edep_keV` 和 `detector_gamma_rate`。这些特征不是黑箱变量，而是由探测器响应统计得到的物理相关量。
+
+## primary_transmission_rate
+
+主 gamma 透射率，计算方式是 `primary_gamma_entries_sum / n_events`。大白话说，就是一组 event 里有多少 primary gamma 成功到达探测器。材料越强吸收 X 射线，这个值通常越低。
+
+## detector_gamma_rate
+
+探测器 gamma 命中率，计算方式是 `detector_gamma_entries_sum / n_events`。它表示每个虚拟样本中探测器平均接收到多少 gamma 命中。
+
+## low_absorption / high_absorption
+
+低吸收组和高吸收组是当前本科验证的分类标签。它们不是具体矿物名称，而是粗粒度吸收组。当前任务是二分类：判断虚拟样本属于低吸收组还是高吸收组。
+
+## train/test split
+
+训练/测试拆分。当前每种材料前 25 个虚拟样本作为训练集，后 25 个作为测试集。十种材料合计后，训练集 250 个样本，测试集 250 个样本。
+
+## threshold baseline
+
+阈值法 baseline。它只使用主 gamma 透射率，在训练集上计算低吸收组和高吸收组的平均值，再取中点作为阈值。它简单但可解释，用来判断单一透射率特征是否已经有效。
+
+## StandardScaler
+
+scikit-learn 中的标准化工具。它把特征转换到更适合线性模型学习的尺度。当前 Logistic Regression 模型前面都接了 `StandardScaler`。
+
+## Logistic Regression
+
+逻辑回归，是一种经典线性分类模型。本项目用它做低/高吸收组二分类。它不是决策树，也不是深度学习模型；它的优势是基础、稳定、容易解释。
+
+## accuracy
+
+Accuracy 是测试样本中预测正确的比例。当前三特征 Logistic Regression 的 accuracy 是 0.9960，意思是 250 个测试虚拟样本中正确 249 个。
+
+## confusion matrix
+
+混淆矩阵展示真实标签和预测标签的对应关系。它能告诉我们错误发生在哪一类。当前三特征 Logistic Regression 中，低吸收组错 1 个，高吸收组错 0 个。
+
+## validation manifest
+
+`validation_manifest.json` 是证据包的总说明，记录材料列表、样本政策、软件版本、生成时间和结论边界。复查结果时应优先看它。
+
+## same-distribution simulation split
+
+同分布仿真切分。意思是训练集和测试集来自同一套仿真条件，只是样本编号不同。这能验证当前仿真链路下的分类能力，但不能等同于真实设备验证或跨工况泛化验证。
+
+## product coverage
+
+产品覆盖指系统能否在真实复杂场景中覆盖足够多矿物、工况和错误类型。当前项目没有证明产品覆盖；它证明的是本科级仿真和分析闭环。

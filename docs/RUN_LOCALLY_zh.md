@@ -1,81 +1,39 @@
-# 本机运行指南
+# 本地运行与复现指南
 
-这份文档面向组员本机复现。它解释如何配置 Geant4/CMake/Python，如何运行材料目录启用的十材料仿真，以及如何生成 `results/undergrad_validation/` 证据包。
+这份文档说明如何在本机重新跑出公开证据包。它的目标不是让你一次性理解所有 C++ 细节，而是让你知道环境要准备什么、命令按什么顺序执行、每一步会产生什么文件、最后如何判断结果是否合理。
 
-## 1. 需要安装什么
+## 1. 运行前需要什么
 
-你需要：
+你需要准备以下环境：
 
-- Geant4
-- CMake
-- 支持 C++17 的编译器
-- Python 3.10 或更高版本
-- Python 包：`pandas`、`scikit-learn`
+- Geant4，且 CMake 能找到 `Geant4Config.cmake`。
+- CMake。
+- 支持 C++17 的编译器。
+- Python 3。
+- Python 包：`pandas`、`scikit-learn`。
 
-VS Code 的 CMake 插件只是界面工具，不等于安装了 CMake，也不等于安装了 Geant4。真正让项目能编译的是：系统里有 `cmake` 命令，且 CMake 能找到 Geant4 安装目录中的 `Geant4Config.cmake`。
-
-## 2. 让 CMake 找到 Geant4
-
-如果 CMake 报错说找不到 Geant4，通常需要先加载 Geant4 环境脚本：
+如果你在 WSL 或 Linux 环境中运行，通常还需要先加载 Geant4 环境脚本，例如：
 
 ```bash
 source /path/to/geant4-install/bin/geant4.sh
 ```
 
-也可以在本机创建 `CMakeUserPresets.json`，但不要提交到 GitHub，因为里面会包含个人机器路径：
+如果 CMake 找不到 Geant4，可以在本机创建不提交 Git 的 `CMakeUserPresets.json`，或设置 `Geant4_DIR` / `CMAKE_PREFIX_PATH`。这些本机绝对路径不应提交到 GitHub。
 
-```json
-{
-  "version": 3,
-  "configurePresets": [
-    {
-      "name": "local-geant4",
-      "generator": "Unix Makefiles",
-      "binaryDir": "${sourceDir}/build",
-      "cacheVariables": {
-        "Geant4_DIR": "/path/to/geant4-install/lib/cmake/Geant4",
-        "CMAKE_PREFIX_PATH": "/path/to/geant4-install"
-      }
-    }
-  ],
-  "buildPresets": [
-    {
-      "name": "local-geant4",
-      "configurePreset": "local-geant4"
-    }
-  ]
-}
-```
+## 2. 构建程序
 
-这个本地配置的好处是：每个人可以使用自己的 Geant4 安装路径，仓库不会泄露个人路径，也不会让别人的机器被你的路径卡住。
-
-## 3. 编译项目
-
-在仓库根目录运行：
+从仓库根目录运行：
 
 ```bash
 cmake -S . -B build
 cmake --build build
 ```
 
-如果使用本地 preset：
+构建成功后，`build/` 目录下应出现 `xrt_sorter` 可执行程序。`build/` 是本机生成目录，不作为 Git 跟踪内容。
 
-```bash
-cmake --preset local-geant4
-cmake --build --preset local-geant4
-```
+## 3. 运行十种材料仿真
 
-编译成功后，`build/` 下会出现可执行程序 `xrt_sorter`。`build/` 是本机生成目录，不提交到 GitHub。
-
-## 4. 运行十材料仿真
-
-公开分类脚本会读取 `source_models/materials/material_catalog.csv` 中 `enabled_for_undergrad=true` 的材料。当前公开证据包启用了十种单一材料：
-
-```text
-quartz calcite orthoclase albite dolomite pyrite hematite magnetite chalcopyrite galena
-```
-
-进入 `build/` 后运行：
+公开证据包使用 `source_models/config/undergrad_batch/` 下的十个材料配置。每个配置文件指定材料、厚度、源项、探测器位置和输出前缀。仿真事件数由 `analysis/configs/run_research.mac` 中的 `/run/beamOn 5000` 控制。
 
 ```bash
 cd build
@@ -88,83 +46,83 @@ done
 cd ..
 ```
 
-每个材料配置都会运行 `/run/beamOn 5000`，生成 5000 个仿真事件。输出文件包括：
+每个材料运行后会在 `build/` 下生成事件级 CSV、命中级 CSV 和 metadata。事件级 CSV 形如 `xrt_real_source_<material>_events.csv`，是后续分类验证的主要输入。
 
-- `build/xrt_real_source_<material>_events.csv`
-- `build/xrt_real_source_<material>_hits.csv`
-- `build/xrt_real_source_<material>_metadata.json`
+## 4. 安装 Python 依赖
 
-如果运行时报 `libG4*.so` 找不到，说明当前 shell 没加载 Geant4 运行时库路径。先执行 `source /path/to/geant4-install/bin/geant4.sh`，再重新运行。
-
-## 5. 生成验证证据包
-
-安装 Python 依赖后运行：
+如果尚未安装依赖，运行：
 
 ```bash
 pip install pandas scikit-learn
+```
+
+本项目的 Python 分析脚本使用 pandas 读取和聚合 CSV，使用 scikit-learn 中的 `StandardScaler`、`LogisticRegression`、`accuracy_score` 和 `confusion_matrix` 完成基础分类验证。
+
+## 5. 生成验证证据包
+
+在仓库根目录运行：
+
+```bash
 python analysis/classify_absorption_groups.py
 ```
 
-脚本会读取 `build/` 下十个 `*_events.csv`，并生成：
+脚本会读取 `source_models/materials/material_catalog.csv` 中启用的材料，再到 `build/` 查找每种材料对应的事件文件。随后脚本会完成以下步骤：
 
-- `results/undergrad_validation/event_row_summary.csv`
-- `results/undergrad_validation/absorption_group_virtual_samples.csv`
-- `results/undergrad_validation/train_test_split_samples.csv`
-- `results/undergrad_validation/feature_group_summary.csv`
-- `results/undergrad_validation/material_feature_summary.csv`
-- `results/undergrad_validation/absorption_group_classification_summary.csv`
-- `results/undergrad_validation/absorption_group_confusion_threshold.csv`
-- `results/undergrad_validation/absorption_group_confusion_logistic_1f.csv`
-- `results/undergrad_validation/absorption_group_confusion_logistic_3f.csv`
-- `results/undergrad_validation/test_predictions.csv`
-- `results/undergrad_validation/validation_manifest.json`
+1. 检查材料目录、配置文件和事件文件是否存在。
+2. 读取事件级 CSV，并检查事件行数、唯一事件数、重复事件数和事件编号连续性。
+3. 每 100 个 event 聚合为 1 个虚拟样本。
+4. 构造 `primary_transmission_rate`、`mean_detector_edep_keV` 和 `detector_gamma_rate` 等样本级特征。
+5. 按每种材料前 25 个样本训练、后 25 个样本测试进行拆分。
+6. 运行阈值法、单特征 Logistic Regression 和三特征 Logistic Regression。
+7. 输出摘要表、混淆矩阵、预测表和 manifest。
 
-同时，脚本会刷新 `results/absorption_group_classification_summary.csv` 和 `results/*confusion*.csv` 作为兼容入口。
+输出目录为：
 
-## 6. 如何检查结果是否合理
+```text
+results/undergrad_validation/
+```
 
-先打开 `results/undergrad_validation/validation_manifest.json`，确认以下内容：
+## 6. 运行后怎样检查
 
-- `enabled_material_count` 为 10。
-- 每种材料 `event_count` 为 5000。
-- 每种材料 `complete_virtual_samples` 为 50。
-- `total_train_samples` 为 250。
-- `total_test_samples` 为 250。
+至少检查下面四个文件：
 
-再打开 `results/undergrad_validation/absorption_group_classification_summary.csv`。当前提交证据包中，阈值法、单特征 Logistic Regression、三特征 Logistic Regression 的测试 accuracy 分别为 `0.9840`、`0.9920`、`0.9960`，其中三特征方法为 `249/250`。
+| 文件 | 应该看到什么 |
+| --- | --- |
+| `event_row_summary.csv` | 每种材料 `event_count=5000`，`duplicate_event_count=0`，`ignored_tail_events=0` |
+| `train_test_split_samples.csv` | 总训练样本 250，总测试样本 250 |
+| `absorption_group_classification_summary.csv` | 三种方法测试结果为 246/250、248/250、249/250 |
+| `validation_manifest.json` | 材料列表、样本政策、软件版本和结论边界 |
 
-最后看混淆矩阵。行是真实标签，列是预测标签。当前三特征 Logistic Regression 的混淆矩阵显示：低吸收组 125 个测试样本中 124 个判对，高吸收组 125 个测试样本全部判对。
+当前公开证据包的核心结果是：
 
-## 7. 如何新增一种材料
+```text
+threshold baseline: 246/250 = 0.9840
+single-feature Logistic Regression: 248/250 = 0.9920
+three-feature Logistic Regression: 249/250 = 0.9960
+```
 
-新增材料不是只改一个名字。当前最小流程是：
+重新运行 Geant4 时，如果没有固定随机种子，个别数字可能小幅波动。只要数据规模、拆分规则和结果级别一致，就说明链路复现成功；如果结果差异很大，应先检查 Geant4 环境、配置文件和事件 CSV 是否完整。
 
-1. 确认 C++ `src/DetectorConstruction.cc` 中已经有该材料的 Geant4 定义；如果没有，需要先补材料元素组成和密度。
-2. 在 `source_models/config/undergrad_batch/` 新增一个配置文件，设置 `ore_primary_material`、`output_prefix`、厚度、源项和探测器参数。
-3. 在 `source_models/materials/material_catalog.csv` 新增一行，填写 `group_label`、`event_file`、`config_file` 和 `enabled_for_undergrad`。
-4. 运行该材料配置，生成新的 `*_events.csv`。
-5. 重新运行 `analysis/classify_absorption_groups.py`，生成新的证据包。
-6. 更新 README、论文和讲解中的材料数、样本数、accuracy 和边界说明。
+## 7. 常见问题
 
-这叫目录驱动的扩展流程，不等于“世界上任意矿物只改词典就能自动识别”。每个新增材料都需要仿真证据支撑。
+### CMake 找不到 Geant4
 
-## 8. 常见问题
+先确认本机已经安装 Geant4，并能找到 `Geant4Config.cmake`。可以用本机环境变量或本机专用的 `CMakeUserPresets.json` 指向 Geant4 安装路径。不要把包含本机绝对路径的配置提交到 GitHub。
 
-**CMake 找不到 Geant4。**
-先确认 Geant4 已安装，再设置 `Geant4_DIR` 或 `CMAKE_PREFIX_PATH`。VS Code 插件不能替代 Geant4 安装。
+### Python 提示找不到事件文件
 
-**编译成功但运行时报动态库找不到。**
-执行 `source /path/to/geant4-install/bin/geant4.sh`，让当前 shell 加载 Geant4 的运行时库路径。
+说明 `analysis/classify_absorption_groups.py` 在 `build/` 下找不到材料目录中声明的 `event_file`。先确认十种材料仿真都运行过，再检查 `source_models/materials/material_catalog.csv` 中的 `event_file` 是否与实际文件名一致。
 
-**Python 提示没有 pandas 或 scikit-learn。**
-运行 `pip install pandas scikit-learn`，或者在自己的虚拟环境里安装。
+### accuracy 和公开结果不完全一致
 
-**Python 提示缺少某个 `xrt_real_source_*_events.csv`。**
-说明材料目录启用的配置没有跑完整。回到第 4 节，把十个材料都运行一遍；如果你新增了材料，也要先跑新增材料的 Geant4 配置。
+Geant4 仿真具有随机性。如果重新生成事件 CSV 且没有固定随机种子，accuracy 可能有小幅波动。当前公开结果应理解为一次可复查证据包，而不是数学上永远固定的常数。
 
-**复跑结果和 GitHub 上数字略有不同。**
-Geant4 仿真有随机性。如果没有固定随机种子，重新生成事件 CSV 后结果可能小幅波动。论文和讲解应以当前提交的 `results/undergrad_validation/` 证据包为准，并说明这个数字不是普适常数。
+### 能不能只新增一个材料
 
-## 9. 重要边界
+可以，但流程不是只改材料目录。你需要确认 `src/DetectorConstruction.cc` 中有该材料的 Geant4 定义，新建 `source_models/config/undergrad_batch/<material>.txt`，补充 `material_catalog.csv`，运行 Geant4 生成该材料事件 CSV，再重新运行 Python 脚本生成新的证据包。新增材料后，论文和 README 中的结论也要同步改写。
 
-本仓库结果只说明当前十材料、固定几何、仿真数据、粗粒度吸收组二分类任务下的表现。它不是真实设备指标，不证明能覆盖所有矿物，也不证明能直接用于工业在线控制。
+## 8. 复现边界
+
+本地复现能验证的是：当前代码、配置和 Python 脚本能重新生成仿真事件数据，并得到同一类低/高吸收组分类结果。它不能验证真实设备性能、复杂矿流泛化能力、工业部署能力或所有矿物覆盖能力。
+
+如果导师要求进一步提高证据等级，下一步应增加固定随机种子、多种子重复、不同厚度和几何、混合材料、独立 run-level 测试以及真实设备或真实样品数据对照。

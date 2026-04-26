@@ -1,71 +1,66 @@
 # Geant4 XRT 矿物分选仿真本科项目
 
-这是一个面向本科项目展示和组内学习的 **X 射线透射（XRT）矿物分选仿真系统**。项目用 Geant4 搭建 X 射线源、矿物样本和探测器，用 C++ 输出事件数据，再用 Python 做特征提取、基础分类和图表展示。
+这是一个面向本科项目展示、答辩准备和组内学习的 **X 射线透射（XRT）矿物分选仿真系统**。项目用 Geant4 搭建 X 射线源、矿物样本和探测器，用 C++ 输出事件数据，再用 Python 完成数据质量检查、样本聚合、特征提取、训练/测试拆分和基础分类验证。
 
-> 一句话：这个仓库展示了一条包含仿真建模、事件输出、Python 特征分析、训练/测试验证、结果证据包和论文材料整理的本科项目链路。
+一句话概括：本仓库展示了一条从物理仿真到可复查机器学习结果的完整链路，而不是一个已经可部署的工业 XRT 产品。
 
 ![系统流程](figures/elementary_system_flow.png)
 
 ## 项目亮点
 
-- **物理仿真链路完整**：从 X 射线源、矿石材料、探测器响应到 CSV 数据输出都有代码实现。
-- **材料和能谱有配置文件**：材料表、源项参数和 W 靶 X 射线谱都放在 `source_models/`，不是把数字写死在论文里。
-- **结果可追溯**：新增 `results/undergrad_validation/`，包含事件行数、虚拟样本、训练/测试拆分、混淆矩阵和 manifest。
-- **分类可解释**：核心依据是透射率、能量沉积和 gamma 命中率等物理相关特征，不是黑箱结果。
-- **本科级成果闭环**：有代码、有图、有结果表、有论文稿、有复现说明，适合答辩、组内学习和二次扩展。
-- **材料库可扩展**：公开材料目录现在驱动十种材料的本科验证，新增材料需要材料定义、配置文件和重新生成证据包。
-- **边界清楚**：最高 `0.9960` accuracy 只表示当前十材料仿真证据包上的粗粒度吸收组测试结果，不等于真实设备效果。
+- **物理仿真链路完整**：包含 X 射线源、矿物材料、样本几何、探测器响应、事件输出和命中输出。
+- **数据来源可追踪**：材料目录、批量配置、事件 CSV、虚拟样本、训练/测试拆分和结果表都保存在仓库中。
+- **特征含义可解释**：核心特征包括主 gamma 透射率、平均探测器能量沉积和 gamma 命中率，均能回到 XRT 吸收差异的物理直觉。
+- **模型选择克制**：使用阈值法 baseline 和 `StandardScaler + LogisticRegression`，避免用复杂模型掩盖数据链路。
+- **结果边界清楚**：当前结论只属于固定仿真条件下的低/高吸收组二分类验证，不代表真实设备、复杂矿流或所有矿物覆盖。
+- **适合组内交接**：提供论文式正文、队友入门指南、运行说明、文件地图和术语表。
 
 ## 先看哪里
 
-第一次阅读建议按这个顺序走：先用 2 分钟扫一遍本页，再读 `docs/TEAM_GUIDE_zh.md`，遇到术语查 `docs/GLOSSARY_BY_FIRST_APPEARANCE.md`，想知道文件位置看 `docs/FILE_MAP_zh.md`，准备上机再看 `docs/RUN_LOCALLY_zh.md`。
+如果你第一次打开这个仓库，建议按下面顺序阅读：
 
-如果你暂时不运行代码，可以用 10 分钟完成一次只读理解：先看本页的图文导览，再打开 `results/undergrad_validation/validation_manifest.json` 看材料数、样本数和边界，最后读 `docs/TEAM_GUIDE_zh.md` 中“为什么六材料足够本科验证，但十材料仍不等于产品覆盖”的章节。
-
-| 你是谁 | 推荐入口 |
+| 你是谁 / 你想做什么 | 推荐入口 |
 | --- | --- |
-| 完全没接触过项目的组员 | `docs/TEAM_GUIDE_zh.md` |
+| 完全没参与过项目的组员 | `docs/TEAM_GUIDE_zh.md` |
+| 只想看通俗解释 | `docs/public_explainer_zh.md` |
+| 想看正式论文式表述 | `paper/main_thesis_HIT_revised_zh.md` |
+| 想在本机跑起来 | `docs/RUN_LOCALLY_zh.md` |
 | 想知道每个文件干什么 | `docs/FILE_MAP_zh.md` |
-| 想在自己电脑上跑起来 | `docs/RUN_LOCALLY_zh.md` |
 | 看不懂专业词 | `docs/GLOSSARY_BY_FIRST_APPEARANCE.md` |
-| 想看论文式成果 | `paper/main_thesis_HIT_revised_zh.md` |
-| 想复查准确率来源 | `results/undergrad_validation/validation_manifest.json` |
+| 想核对结果数字 | `results/undergrad_validation/validation_manifest.json` |
+| 想看最终边界复核 | `docs/FINAL_ELEMENTARY_REVIEW_zh.md` |
 
-## 图文导览
-
-### 1. X 射线源不是随便假设的
-
-项目保留了 W 靶 120 kV 能谱数据，用来让源项更接近 XRT 任务的物理背景。
-
-![X 射线能谱](figures/elementary_xray_spectrum.png)
-
-### 2. 仿真输出可以变成可解释特征
-
-探测器记录事件后，Python 统计主 gamma 透射率、探测器能量沉积和 gamma 命中率，用这些特征支撑分类判断。
-
-![直接与散射命中比例](figures/elementary_direct_scatter_ratio.png)
-
-### 3. 基础分类已有可复查证据
-
-当前证据包包含十种材料，每种材料 5000 个 events，每 100 个 events 聚合为 1 个虚拟样本，共 500 个虚拟样本。每种材料前 25 个样本训练、后 25 个样本测试，总测试样本为 250 个。当前三特征 Logistic Regression 在测试集上正确 249 个样本，accuracy 为 `0.9960`。
-
-![基础分类精度](figures/elementary_absorption_accuracy.png)
-
-## 项目流程
+## 数据链路
 
 ```mermaid
 flowchart LR
-    A["材料目录与十材料配置"] --> B["Geant4 C++ 仿真"]
-    B --> C["CSV 事件数据"]
-    C --> D["Python 虚拟样本与特征"]
-    D --> E["训练/测试拆分"]
-    E --> F["阈值法与 Logistic Regression"]
-    F --> G["结果证据包与论文"]
+    A["材料目录与配置文件"] --> B["Geant4 C++ 仿真"]
+    B --> C["events.csv / hits.csv / metadata"]
+    C --> D["Python 质量检查"]
+    D --> E["100 events -> 1 个虚拟样本"]
+    E --> F["特征工程"]
+    F --> G["训练/测试拆分"]
+    G --> H["阈值法与 Logistic Regression"]
+    H --> I["结果证据包与论文"]
 ```
+
+公开证据包使用十种单一材料：Quartz、Calcite、Orthoclase、Albite、Dolomite、Pyrite、Hematite、Magnetite、Chalcopyrite 和 Galena。每种材料运行 5000 个仿真事件，每 100 个事件聚合为 1 个虚拟样本，因此每种材料形成 50 个虚拟样本，总计 500 个虚拟样本。训练集和测试集按每种材料 25/25 切分，最终各有 250 个样本。
+
+## 当前验证结果
+
+| 方法 | 特征 | 测试样本 | 正确样本 | accuracy |
+| --- | --- | ---: | ---: | ---: |
+| 阈值法 | `primary_transmission_rate` | 250 | 246 | 0.9840 |
+| Logistic Regression | `primary_transmission_rate` | 250 | 248 | 0.9920 |
+| Logistic Regression | 三个物理相关特征 | 250 | 249 | 0.9960 |
+
+![基础分类精度](figures/elementary_absorption_accuracy.png)
+
+这里的 `0.9960` 表示三特征 Logistic Regression 在 250 个测试虚拟样本中正确 249 个。它不是训练集准确率，也不是所有矿物、真实设备或工业场景的普适准确率。
 
 ## 快速运行
 
-如果你的电脑已经安装好 Geant4、CMake、C++ 编译器和 Python 依赖，可以从仓库根目录运行材料目录启用的十材料公开复现配置：
+如果你的环境已经安装 Geant4、CMake、C++17 编译器、Python、pandas 和 scikit-learn，可以从仓库根目录运行：
 
 ```bash
 pip install pandas scikit-learn
@@ -82,28 +77,35 @@ cd ..
 python analysis/classify_absorption_groups.py
 ```
 
-如果运行时提示找不到 Geant4 动态库，请先加载本机 Geant4 环境脚本，例如 `source /path/to/geant4-install/bin/geant4.sh`。更详细的依赖和排错见 `docs/RUN_LOCALLY_zh.md`。
+运行成功后，重点检查：
 
-运行成功后，最少检查三件事：`event_row_summary.csv` 中十种材料都是 5000 events，`validation_manifest.json` 中训练/测试样本分别为 250/250，`absorption_group_classification_summary.csv` 中三特征 Logistic Regression 为 `249/250 = 0.9960`。复跑有随机性，数字可以小幅波动。
+- `results/undergrad_validation/event_row_summary.csv`：每种材料是否都有 5000 个事件。
+- `results/undergrad_validation/train_test_split_samples.csv`：训练/测试拆分是否为 250/250。
+- `results/undergrad_validation/absorption_group_classification_summary.csv`：三种方法的测试集结果。
+- `results/undergrad_validation/validation_manifest.json`：样本政策、软件版本和结论边界。
+
+更详细的依赖、VS Code/CMake 配置和排错见 `docs/RUN_LOCALLY_zh.md`。
 
 ## 目录结构
 
 ```text
 include/              Geant4 C++ 头文件
 src/                  Geant4 C++ 实现
-source_models/        材料、源项、能谱和实验配置
-analysis/             Python 分类脚本和运行宏
-results/              本科级结果表和验证证据包
-figures/              README 和论文可引用的图
-docs/                 给组员看的讲解文档
-paper/                本科论文式材料
+source_models/        材料目录、源项、能谱和实验配置
+analysis/             Python 分析脚本和运行宏
+results/              本科级验证证据包
+figures/              README 和论文可引用图
+docs/                 组员入门、术语、文件地图和运行说明
+paper/                论文式正文、复现说明和参考文献
 ```
 
 ## 项目边界
 
-本仓库公开的是本科级仿真项目成果。它可以说明：我们完成了 Geant4 XRT 仿真系统、数据输出、基础特征分析、明确训练/测试拆分和仿真数据上的粗粒度分类验证。
+本仓库可以说明：我们完成了 Geant4 XRT 仿真系统、事件级数据输出、样本级特征构造、明确训练/测试拆分和仿真数据上的粗粒度吸收组分类验证。
 
-最初六材料已经足够证明本科项目的基本闭环；当前十材料证据包进一步说明材料库和配置流程可以扩展。但它不应该被解释为：已经完成现场设备验证、可直接用于分选设备控制、已经覆盖复杂矿石流的全部情况、或可以对世界上所有矿物都保持同样准确率。
+本仓库不能说明：真实 XRT 设备已经验证、复杂矿流已经覆盖、所有矿物都能识别、模型可直接控制工业分选设备，或当前结果已经达到产品部署条件。
+
+如果后续导师要求更高标准，下一阶段应增加固定随机种子、多种子重复、不同厚度和几何、混合材料、独立 run-level 测试以及真实设备或真实样品对照。
 
 ## 权利声明
 

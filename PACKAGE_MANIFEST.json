@@ -71,8 +71,8 @@
     },
     {
       "path": "README.md",
-      "size_bytes": 6337,
-      "sha256": "5cba4560ffad568baeca073cdebc95d6cee85688a2d271bc24439975679ed5a8"
+      "size_bytes": 6053,
+      "sha256": "d4ee17689b72b238dedca76cd036bfe06bef16a8a77ae899cb60566eb694117f"
     },
     {
       "path": "analysis/classify_absorption_groups.py",
@@ -86,33 +86,33 @@
     },
     {
       "path": "docs/FILE_MAP_zh.md",
-      "size_bytes": 5848,
-      "sha256": "b563cfd2e47e4d9ca561fa4955049516ab32443f115d96f503402101edfc9e3b"
+      "size_bytes": 5609,
+      "sha256": "6f3507d876785b7f64997b4848d3c11210d988941dff87547232a2adc36f4f7d"
     },
     {
       "path": "docs/FINAL_ELEMENTARY_REVIEW_zh.md",
-      "size_bytes": 2027,
-      "sha256": "624b120af86a2162552582ca40db7c0254a23e37f1c37b6a5368472462ba0166"
+      "size_bytes": 3060,
+      "sha256": "78715b8dcf523c0b729977680031ed69facf8c27c53fd4c49a4c515ab0cd9f53"
     },
     {
       "path": "docs/GLOSSARY_BY_FIRST_APPEARANCE.md",
-      "size_bytes": 7435,
-      "sha256": "953c866d6a5377031d9348fc45f6a286d9326a2cca52c881efc0209c52a50c92"
+      "size_bytes": 4727,
+      "sha256": "89cf3e8169acfc3e41029c11b0f50932e0a7fb84b88184d59d853b0bbedfdd69"
     },
     {
       "path": "docs/RUN_LOCALLY_zh.md",
-      "size_bytes": 7035,
-      "sha256": "9b529426c6cc341eece5e22e77bb66f3c9c566fca1a7f867841d08a7413fe12c"
+      "size_bytes": 5900,
+      "sha256": "23b4dd008f19d7b3ac4371f964e5e5136c1bbb85a023f4df8d6af44fb5c694a4"
     },
     {
       "path": "docs/TEAM_GUIDE_zh.md",
-      "size_bytes": 14072,
-      "sha256": "c14e34834f98214dd6291de532fafbe19bab5b1ce998dedd1b4f51da18ec347a"
+      "size_bytes": 14685,
+      "sha256": "c613efb2f218f7decad74aab4268827c213ef5da1cdf3c5acc1909c7711905e7"
     },
     {
       "path": "docs/public_explainer_zh.md",
-      "size_bytes": 1920,
-      "sha256": "38dac3f1764c99c4911e9ea0d792d0f53e5ad1813ae50f4541e007a447653a84"
+      "size_bytes": 2994,
+      "sha256": "9b15b41b2218251cec617eb1df2f82a14277e9ac904bc8f5c8543c8023db4a32"
     },
     {
       "path": "exampleB1.cc",
@@ -201,8 +201,8 @@
     },
     {
       "path": "paper/main_thesis_HIT_revised_zh.md",
-      "size_bytes": 19371,
-      "sha256": "0614a6ab3cd1608b52c8bba9eea63a970d0004a3b6f590c1ff651ade3fb724c2"
+      "size_bytes": 19811,
+      "sha256": "546a4720e3e7384544738d2ecc7924e500f35ba73f7273b98923d5f0ee6dbbbe"
     },
     {
       "path": "paper/references.md",
