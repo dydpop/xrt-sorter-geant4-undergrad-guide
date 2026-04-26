@@ -1,7 +1,10 @@
 {
   "status": "UNDERGRADUATE_PROJECT_READY",
   "project_level": "undergraduate simulation and baseline classification",
-  "best_absorption_group_accuracy": 0.98,
+  "best_absorption_group_accuracy": 0.9933333333333333,
+  "validation_evidence_dir": "results/undergrad_validation",
+  "train_samples": 150,
+  "test_samples": 150,
   "claim_boundary": "simulated coarse absorption-group classification only",
   "public_package": true,
   "core_outputs": [

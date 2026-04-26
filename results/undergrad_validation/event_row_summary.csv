@@ -1,0 +1,7 @@
+material,group_label,event_file,event_count,unique_event_count,duplicate_event_count,min_event_id,max_event_id,event_ids_contiguous,photons_per_virtual_sample,complete_virtual_samples,ignored_tail_events
+Quartz,low_absorption,xrt_real_source_quartz_events.csv,5000,5000,0,0,4999,True,100,50,0
+Orthoclase,low_absorption,xrt_real_source_orthoclase_events.csv,5000,5000,0,0,4999,True,100,50,0
+Calcite,low_absorption,xrt_real_source_calcite_events.csv,5000,5000,0,0,4999,True,100,50,0
+Pyrite,high_absorption,xrt_real_source_pyrite_events.csv,5000,5000,0,0,4999,True,100,50,0
+Hematite,high_absorption,xrt_real_source_hematite_events.csv,5000,5000,0,0,4999,True,100,50,0
+Magnetite,high_absorption,xrt_real_source_magnetite_events.csv,5000,5000,0,0,4999,True,100,50,0

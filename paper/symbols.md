@@ -1,13 +1,18 @@
-# 符号与缩写
+# 符号与变量说明
 
-| 符号或缩写 | 含义 |
+| 符号/变量 | 含义 |
 | --- | --- |
 | XRT | X-ray Transmission，X 射线透射 |
-| Geant4 | 粒子与材料相互作用仿真工具包 |
-| CSV | Comma-Separated Values，表格数据文件 |
-| Edep | Energy deposition，能量沉积 |
-| accuracy | 分类正确率 |
-| low_absorption | 低吸收组 |
-| high_absorption | 高吸收组 |
-| Logistic Regression | 逻辑回归，一种基础分类方法 |
-| CMake | C++ 项目构建工具 |
+| `event_id` | 仿真事件编号 |
+| `detector_edep_keV` | 单个 event 中探测器能量沉积，单位 keV |
+| `detector_gamma_entries` | 单个 event 中 gamma 进入探测器的计数 |
+| `primary_gamma_entries` | 单个 event 中 primary gamma 到达探测器的计数 |
+| `PHOTONS_PER_SAMPLE` | 每个虚拟样本包含的 event 数，当前为 100 |
+| `sample_id` | 虚拟样本编号 |
+| `primary_transmission_rate` | 主 gamma 透射率 |
+| `mean_detector_edep_keV` | 样本级平均探测器能量沉积 |
+| `detector_gamma_rate` | 样本级探测器 gamma 命中率 |
+| `group_label` | 粗粒度吸收组标签 |
+| `low_absorption` | 低吸收组 |
+| `high_absorption` | 高吸收组 |
+| accuracy | 测试集中预测正确样本的比例 |

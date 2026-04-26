@@ -1,0 +1,169 @@
+{
+  "package": "xrt-sorter-geant4-undergrad-guide",
+  "generated_by": "analysis/classify_absorption_groups.py",
+  "generated_at_utc": "2026-04-26T10:22:02+00:00",
+  "input_event_dir": "build",
+  "output_dir": "results/undergrad_validation",
+  "simulation_scope": {
+    "materials": [
+      "Quartz",
+      "Orthoclase",
+      "Calcite",
+      "Pyrite",
+      "Hematite",
+      "Magnetite"
+    ],
+    "classification_target": "coarse absorption group",
+    "low_absorption": [
+      "Quartz",
+      "Orthoclase",
+      "Calcite"
+    ],
+    "high_absorption": [
+      "Pyrite",
+      "Hematite",
+      "Magnetite"
+    ],
+    "geometry_summary": "six single-material slab configurations, 10 mm ore thickness, W-target 120 kV spectrum"
+  },
+  "sample_policy": {
+    "photons_per_virtual_sample": 100,
+    "train_samples_per_material": 25,
+    "test_samples_per_material": 25,
+    "total_virtual_samples": 300,
+    "total_train_samples": 150,
+    "total_test_samples": 150
+  },
+  "event_summary": [
+    {
+      "material": "Quartz",
+      "group_label": "low_absorption",
+      "event_file": "xrt_real_source_quartz_events.csv",
+      "event_count": 5000,
+      "unique_event_count": 5000,
+      "duplicate_event_count": 0,
+      "min_event_id": 0,
+      "max_event_id": 4999,
+      "event_ids_contiguous": true,
+      "photons_per_virtual_sample": 100,
+      "complete_virtual_samples": 50,
+      "ignored_tail_events": 0
+    },
+    {
+      "material": "Orthoclase",
+      "group_label": "low_absorption",
+      "event_file": "xrt_real_source_orthoclase_events.csv",
+      "event_count": 5000,
+      "unique_event_count": 5000,
+      "duplicate_event_count": 0,
+      "min_event_id": 0,
+      "max_event_id": 4999,
+      "event_ids_contiguous": true,
+      "photons_per_virtual_sample": 100,
+      "complete_virtual_samples": 50,
+      "ignored_tail_events": 0
+    },
+    {
+      "material": "Calcite",
+      "group_label": "low_absorption",
+      "event_file": "xrt_real_source_calcite_events.csv",
+      "event_count": 5000,
+      "unique_event_count": 5000,
+      "duplicate_event_count": 0,
+      "min_event_id": 0,
+      "max_event_id": 4999,
+      "event_ids_contiguous": true,
+      "photons_per_virtual_sample": 100,
+      "complete_virtual_samples": 50,
+      "ignored_tail_events": 0
+    },
+    {
+      "material": "Pyrite",
+      "group_label": "high_absorption",
+      "event_file": "xrt_real_source_pyrite_events.csv",
+      "event_count": 5000,
+      "unique_event_count": 5000,
+      "duplicate_event_count": 0,
+      "min_event_id": 0,
+      "max_event_id": 4999,
+      "event_ids_contiguous": true,
+      "photons_per_virtual_sample": 100,
+      "complete_virtual_samples": 50,
+      "ignored_tail_events": 0
+    },
+    {
+      "material": "Hematite",
+      "group_label": "high_absorption",
+      "event_file": "xrt_real_source_hematite_events.csv",
+      "event_count": 5000,
+      "unique_event_count": 5000,
+      "duplicate_event_count": 0,
+      "min_event_id": 0,
+      "max_event_id": 4999,
+      "event_ids_contiguous": true,
+      "photons_per_virtual_sample": 100,
+      "complete_virtual_samples": 50,
+      "ignored_tail_events": 0
+    },
+    {
+      "material": "Magnetite",
+      "group_label": "high_absorption",
+      "event_file": "xrt_real_source_magnetite_events.csv",
+      "event_count": 5000,
+      "unique_event_count": 5000,
+      "duplicate_event_count": 0,
+      "min_event_id": 0,
+      "max_event_id": 4999,
+      "event_ids_contiguous": true,
+      "photons_per_virtual_sample": 100,
+      "complete_virtual_samples": 50,
+      "ignored_tail_events": 0
+    }
+  ],
+  "methods": [
+    {
+      "method": "A_threshold_transmission_only",
+      "model_family": "threshold",
+      "n_features": 1,
+      "feature_columns": "primary_transmission_rate",
+      "train_samples": 150,
+      "test_samples": 150,
+      "correct_test_samples": 147,
+      "accuracy": 0.98,
+      "threshold": 0.17313333333333333
+    },
+    {
+      "method": "B_logistic_transmission_only",
+      "model_family": "standard_scaler_plus_logistic_regression",
+      "n_features": 1,
+      "feature_columns": "primary_transmission_rate",
+      "train_samples": 150,
+      "test_samples": 150,
+      "correct_test_samples": 148,
+      "accuracy": 0.9866666666666667,
+      "threshold": ""
+    },
+    {
+      "method": "C_logistic_transmission_edep_gamma",
+      "model_family": "standard_scaler_plus_logistic_regression",
+      "n_features": 3,
+      "feature_columns": "primary_transmission_rate;mean_detector_edep_keV;detector_gamma_rate",
+      "train_samples": 150,
+      "test_samples": 150,
+      "correct_test_samples": 149,
+      "accuracy": 0.9933333333333333,
+      "threshold": ""
+    }
+  ],
+  "software": {
+    "python": "3.10.12",
+    "pandas": "2.3.3",
+    "scikit_learn": "1.7.2"
+  },
+  "claim_boundary": [
+    "The evidence is simulated data from the six undergraduate public configurations.",
+    "Accuracy is evaluated on a same-distribution simulated test split, not on physical equipment data.",
+    "The result does not prove general classification of all minerals, mixed ore streams, or industrial deployment.",
+    "Geant4 simulation is stochastic; regenerating event CSV files without fixed random seeds can produce small numerical differences."
+  ]
+}

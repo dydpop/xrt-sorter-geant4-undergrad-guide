@@ -1,138 +1,148 @@
 # 组员从零入门指南
 
-这份指南写给完全没有参与过项目的组员。你不需要一开始就懂 Geant4、XRT、C++ 或机器学习。先按顺序读完这份文档，再去看代码和论文，会轻松很多。
+这份文档写给完全没有参与过项目的组员。它的目标不是让你背术语，而是让你能看懂这个 GitHub 仓库里真实做了什么、数据怎么来、准确率怎么得出、哪些结论能说、哪些结论不能说。
 
-## 1. 这个项目到底在做什么
+## 0. 先按用途找文件
 
-矿石分选的一个常见思路是：不同矿物对 X 射线的吸收能力不同。如果一束 X 射线穿过矿石，探测器接收到的信号会变化。我们可以利用这种变化判断样本更像低吸收材料还是高吸收材料。
+| 你现在想做什么 | 先看哪些文件 | 它解决什么问题 |
+| --- | --- | --- |
+| 快速知道项目是什么 | `README.md`、本文件 | 项目目标、成果亮点、读法顺序 |
+| 看懂讲解内容 | `docs/TEAM_GUIDE_zh.md`、`docs/GLOSSARY_BY_FIRST_APPEARANCE.md`、`docs/FILE_MAP_zh.md` | 背景、术语、文件位置 |
+| 在自己电脑运行 | `docs/RUN_LOCALLY_zh.md`、`analysis/configs/run_research.mac`、`source_models/config/undergrad_batch/*.txt` | Geant4/CMake/Python 运行步骤 |
+| 理解数据从哪里来 | `src/RunAction.cc`、`src/EventAction.cc`、`src/SteppingAction.cc` | C++ 如何写出 CSV 字段 |
+| 理解分类怎么做 | `analysis/classify_absorption_groups.py`、`results/undergrad_validation/` | 样本构造、训练/测试拆分、分类器、混淆矩阵 |
+| 写论文或答辩 | `paper/main_thesis_HIT_revised_zh.md`、`paper/reproducibility.md`、`figures/` | 正式表述、复现路径、图表引用 |
+| 继续开发代码 | `include/`、`src/`、`source_models/`、`analysis/` | Geant4 主程序、配置、Python 分析 |
 
-这个项目做的事情，是用 Geant4 在电脑里搭一个虚拟实验台：
+不要从 `src/` 一头扎进去。先读本文件，再看 `results/undergrad_validation/validation_manifest.json`，最后回到代码。这样你知道每段代码是在服务哪一段证据链。
+
+## 1. 用一句通俗话理解项目
+
+这个项目做的是：在电脑里搭一个虚拟 X 射线透射实验，让 X 射线穿过不同矿物材料，记录探测器接收到多少信号，再用 Python 把这些信号整理成特征，判断样本属于“低吸收组”还是“高吸收组”。
+
+更短地说，它不是直接拿真实机器数据训练模型，而是先用 Geant4 做物理仿真，再用 Python 做本科级别的特征分析和基础分类验证。
 
 ```mermaid
 flowchart LR
-    S["X 射线源"] --> O["矿石样本"]
-    O --> D["探测器"]
-    D --> C["CSV 数据"]
-    C --> P["Python 分析"]
-    P --> R["图表和分类结果"]
+    A["六种材料配置"] --> B["Geant4 XRT 仿真"]
+    B --> C["events.csv / hits.csv"]
+    C --> D["100 个 event 聚合成 1 个虚拟样本"]
+    D --> E["训练集 / 测试集"]
+    E --> F["阈值法与 Logistic Regression"]
+    F --> G["结果表与混淆矩阵"]
 ```
 
-换句话说，我们先让电脑模拟 X 射线穿过矿石，再把探测器数据导出来，最后用 Python 做统计和基础分类。
+## 2. 项目真正完成了哪些内容
 
-## 2. 这个项目由哪些环节组成
+这个公开仓库展示的是本科级别成果闭环。第一，仓库里有 Geant4 C++ 程序，可以配置 X 射线源、矿物样本、探测器和输出文件。第二，仓库里有六种公开复现材料配置：Quartz、Orthoclase、Calcite、Pyrite、Hematite、Magnetite。第三，仓库里有 Python 脚本，把仿真事件数据聚合为虚拟样本，并进行粗粒度吸收组分类。第四，仓库里有结果证据包、图表、论文式说明和本地运行说明。
 
-这个项目不是只拿一个现成 CSV 表格训练模型，而是把数据产生、数据整理和结果表达放在同一个链路里：
+这里最重要的不是某一个数字，而是“从物理仿真到数据表、从数据表到特征、从特征到分类结果”的链条已经打通。你看项目时要沿着这条链路看，不要只看最后的 accuracy。
 
-- 用 C++ 和 Geant4 搭建仿真场景。
-- 用材料配置表描述矿物。
-- 用能谱文件描述 X 射线源。
-- 输出事件级数据和探测器响应。
-- 再用 Python 把物理信号变成可解释特征。
-- 最后形成结果图、结果表和论文式说明。
+## 3. 数据是怎么产生的
 
-所以读这个项目时，不要只看最后的分类结果，也要看前面的仿真建模、事件输出和特征整理。
+公开复现实验使用 `source_models/config/undergrad_batch/` 中的六个配置文件。每个配置文件指定一种单一材料、10 mm 样本厚度、W 靶 120 kV 能谱、探测器位置和输出前缀。`analysis/configs/run_research.mac` 中的核心命令是 `/run/beamOn 5000`，意思是每种材料发射 5000 次模拟事件。
 
-## 3. 先理解几个核心词
+C++ 端写出的主要事件文件叫 `xrt_real_source_<material>_events.csv`。这个文件不是手写表格，而是 Geant4 程序运行后由 `src/RunAction.cc`、`src/EventAction.cc` 和 `src/SteppingAction.cc` 写出的。事件表每一行对应一次模拟事件，表头如下：
 
-**Geant4** 是一个粒子物理仿真工具包。这里用它来模拟 X 射线穿过材料。
+| CSV 字段 | 来自哪里 | 含义 |
+| --- | --- | --- |
+| `event_id` | `EventAction` | 第几次模拟事件，从 0 到 4999 |
+| `detector_edep_keV` | `SteppingAction` 累加后写出 | 探测器中沉积的能量，单位 keV |
+| `detector_gamma_entries` | gamma 进入探测器时计数 | 探测器接收到的 gamma 命中数 |
+| `primary_gamma_entries` | primary gamma 到达探测器时计数 | 没有被作为次级粒子重新产生的主 gamma 命中数 |
 
-**XRT** 是 X-ray Transmission 的缩写，意思是 X 射线透射。它关注 X 射线穿过物体后剩下多少信号。
+还有一个 `*_hits.csv` 文件，记录更细的命中位置、能量、是否为 primary、偏转角等信息。本科公开分类主要使用 `*_events.csv`，因为它更适合做稳定、清楚的样本级统计。
 
-**矿物分选** 是把不同性质的矿物分开。这个项目只做仿真和基础验证，不直接控制现实设备。
+## 4. event 怎样变成分类样本
 
-**探测器** 是仿真里的接收面。X 射线穿过矿石后，探测器记录能量沉积和命中信息。
+机器学习里说的“样本”不是单个 photon event。我们把每 100 个仿真事件聚合成一个虚拟样本。这个规则写在 `analysis/classify_absorption_groups.py` 的 `PHOTONS_PER_SAMPLE = 100`。
 
-**CSV** 是表格数据文件。C++ 仿真把结果写成 CSV，Python 再读取这些 CSV。
+因此，数据规模是这样来的：
 
-完整术语表见 `docs/GLOSSARY_BY_FIRST_APPEARANCE.md`。
+| 层级 | 数量 |
+| --- | --- |
+| 每种材料 event 数 | 5000 |
+| 每个虚拟样本包含 event 数 | 100 |
+| 每种材料虚拟样本数 | 50 |
+| 六种材料总虚拟样本数 | 300 |
+| 低吸收组样本数 | 150 |
+| 高吸收组样本数 | 150 |
 
-## 4. 项目文件怎么读
+脚本会生成 `results/undergrad_validation/absorption_group_virtual_samples.csv`，这里每一行才是分类使用的虚拟样本。
 
-建议按这个顺序读。第一步只需要快速扫一遍 README，不需要立刻看懂所有细节：
+## 5. Python 里用了哪些变量
 
-1. `README.md`：看项目亮点和整体结构。
-2. `docs/TEAM_GUIDE_zh.md`：也就是本文，建立直觉。
-3. `docs/GLOSSARY_BY_FIRST_APPEARANCE.md`：遇到术语就查。
-4. `docs/FILE_MAP_zh.md`：知道每个目录干什么。
-5. `docs/RUN_LOCALLY_zh.md`：尝试在自己电脑上运行。
-6. `paper/main_thesis_HIT_revised_zh.md`：看正式论文式表达。
+Python 脚本从事件级字段构造出样本级特征。你读 `analysis/classify_absorption_groups.py` 时，可以按下面的对应关系理解变量：
 
-如果你只想快速看成果，先看图：
+| Python 变量 | 计算方式 | 大白话含义 |
+| --- | --- | --- |
+| `sample_id` | `event_id // 100` | 每 100 个 event 编成一个样本编号 |
+| `n_events` | 每个 `sample_id` 的 event 数 | 这个虚拟样本里有多少次发射 |
+| `detector_edep_keV_sum` | `detector_edep_keV` 求和 | 100 次事件总共在探测器留下多少能量 |
+| `primary_gamma_entries_sum` | `primary_gamma_entries` 求和 | 100 次事件中有多少主 gamma 到达探测器 |
+| `mean_detector_edep_keV` | `detector_edep_keV_sum / n_events` | 平均每次事件的探测器能量沉积 |
+| `detector_gamma_rate` | `detector_gamma_entries_sum / n_events` | 探测器 gamma 命中率 |
+| `primary_transmission_rate` | `primary_gamma_entries_sum / n_events` | 主 gamma 透射率，是最核心的吸收差异特征 |
+| `group_label` | `GROUP_MAP` 映射 | 分类标签：低吸收组或高吸收组 |
 
-- `figures/elementary_system_flow.png`
-- `figures/elementary_xray_spectrum.png`
-- `figures/elementary_direct_scatter_ratio.png`
-- `figures/elementary_absorption_accuracy.png`
+本项目不是用一堆黑箱变量硬训练。三个核心特征都能回到物理直觉：材料越容易吸收 X 射线，透过样本到达探测器的 primary gamma 通常越少，透射率也就越低。
 
-## 5. 代码主线是什么
+## 6. 训练集和测试集怎样划分
 
-项目有两条主线：C++ 仿真和 Python 分析。
+你提出的这个问题很关键：不能用训练集训练后又在训练集上报准确率。当前脚本确实做了训练/测试拆分。
 
-C++ 主线：
+拆分规则是按每种材料分别切分：前 25 个虚拟样本进入训练集，后 25 个虚拟样本进入测试集。六种材料合计后，训练集为 150 个虚拟样本，测试集也为 150 个虚拟样本。结果证据见 `results/undergrad_validation/train_test_split_samples.csv` 和 `results/undergrad_validation/validation_manifest.json`。
 
-```text
-exampleB1.cc
-include/
-src/
-source_models/
-```
+这说明当前结果不是“训练集准确率”。但也要讲清楚它的局限：训练集和测试集来自同一套仿真配置、同一种几何、同一类材料设置。这叫同分布仿真切分测试，不能等同于真实设备测试，也不能证明模型能自动推广到世界上所有矿物。
 
-它负责搭建 X 射线源、矿石、探测器和运行逻辑。
+## 7. 分类方法到底是什么
 
-Python 主线：
+脚本做了三种基础方法对比。
 
-```text
-analysis/classify_absorption_groups.py
-results/
-figures/
-```
+第一种是阈值法 `A_threshold_transmission_only`。它只看 `primary_transmission_rate`。脚本先在训练集里分别计算低吸收组和高吸收组的平均透射率，再取两个均值的中点作为 `threshold`。测试样本的透射率高于阈值就判为低吸收组，低于阈值就判为高吸收组。
 
-它负责读取仿真输出，构造样本，训练基础分类方法，并输出结果表。
+第二种是单特征 Logistic Regression：`B_logistic_transmission_only`。它仍然只用 `primary_transmission_rate`，但用 scikit-learn 的 `StandardScaler + LogisticRegression` 建立一个线性分类边界。`StandardScaler` 的作用是把特征标准化，`LogisticRegression` 的作用是学习从特征到类别概率的线性判别关系。
 
-## 6. 结果怎么看
+第三种是三特征 Logistic Regression：`C_logistic_transmission_edep_gamma`。它使用 `primary_transmission_rate`、`mean_detector_edep_keV` 和 `detector_gamma_rate` 三个特征。这个方法看起来更像一个小型特征组合模型，但仍然是基础、可解释的本科级方法，不是复杂深度学习。
 
-最关键结果是 `results/absorption_group_classification_summary.csv`。
+## 8. 准确率是怎么得出来的
 
-这个表比较了几种基础方法，包括阈值法和 Logistic Regression。当前粗粒度吸收组分类的最高 accuracy 是 `0.98`。
+本轮提交的证据包中，三种方法都只在测试集上计算 accuracy。测试集分母是 150 个虚拟样本。
 
-要注意：这个数字只说明当前仿真设置下的粗粒度分类效果好。它不是现实设备指标，也不是所有矿物都能准确区分的证明。
+| 方法 | 测试样本 | 正确样本 | 测试 accuracy |
+| --- | ---: | ---: | ---: |
+| 阈值法 | 150 | 147 | 0.9800 |
+| 单特征 Logistic Regression | 150 | 148 | 0.9867 |
+| 三特征 Logistic Regression | 150 | 149 | 0.9933 |
 
-## 7. 每个组员能做什么
+混淆矩阵可以告诉我们错在哪里。以三特征 Logistic Regression 为例，`results/undergrad_validation/absorption_group_confusion_logistic_3f.csv` 的含义是：行是真实标签，列是预测标签。当前证据集中，高吸收组 75 个测试样本全部判对；低吸收组 75 个测试样本中有 1 个被判成高吸收组。
 
-如果你负责讲解：
+所以，`0.9933` 的意思是 `149 / 150`，不是“世界上所有矿物都能 99.33% 分对”。它只属于这次六材料、单一材料、固定厚度、仿真数据、粗粒度二分类任务。
 
-- 读 `README.md` 和本文。
-- 用四张核心图讲清楚流程。
-- 强调“仿真系统 + 基础分类验证”的边界。
+## 9. 为什么不能说覆盖所有矿物
 
-如果你负责运行：
+这个项目目前只做了六种材料，并且是单一材料 slab 配置。真实矿石可能有混合矿物、裂隙、孔隙、粒径变化、表面污染、设备噪声、传送带速度、探测器响应漂移等问题。即使只在计算机里，也不能因为六种材料分得好，就推出“世界上所有矿物都能正确分类”。
 
-- 读 `docs/RUN_LOCALLY_zh.md`。
-- 先确认 Geant4 和 Python 环境。
-- 能跑通 CMake 和 `analysis/classify_absorption_groups.py`。
+更严谨的说法是：当前结果表明，在公开仓库定义的六种材料仿真配置中，XRT 事件数据能够形成有区分度的透射特征，并支持低吸收组/高吸收组的粗粒度分类验证。这个结论有证据支持，也没有越界。
 
-如果你负责论文：
+## 10. 直接命中和散射命中怎样理解
 
-- 读 `paper/main_thesis_HIT_revised_zh.md`。
-- 对照 `figures/` 和 `results/` 检查证据。
-- 不要把仿真结果写成现实设备结果。
+`src/SteppingAction.cc` 里还记录了 `is_direct_primary` 和 `is_scattered_primary`。当前工程判据是：primary gamma 到达探测器时，如果相对束流方向的偏转角 `theta_deg < 1.0`，就记为近似直接透射；否则记为散射后透射。
 
-如果你负责继续开发：
+这只是本科项目中的工程近似，不是严格的物理真值分类。写论文或答辩时，可以说“使用 1 度阈值作为工程判据区分近似直接透射和散射后透射”，不要说成“精确识别了所有散射物理过程”。
 
-- 先看 `docs/FILE_MAP_zh.md`。
-- 小改动走 Git 分支和 Pull Request。
-- 不要直接把主分支改乱。
+## 11. 最推荐的阅读顺序
 
-## 8. 项目最容易被误解的地方
+第一次读仓库时，按这个顺序效率最高：
 
-第一，Geant4 不是模型训练框架。它负责物理仿真。
+1. `README.md`：看项目总体样子。
+2. `docs/TEAM_GUIDE_zh.md`：理解完整链路。
+3. `results/undergrad_validation/validation_manifest.json`：确认数据规模、拆分和边界。
+4. `analysis/classify_absorption_groups.py`：对照本文件看变量和方法。
+5. `src/RunAction.cc`、`src/EventAction.cc`、`src/SteppingAction.cc`：追踪 CSV 字段来源。
+6. `paper/main_thesis_HIT_revised_zh.md`：学习论文式表达。
+7. `docs/RUN_LOCALLY_zh.md`：准备自己复现时再读。
 
-第二，Python 分类不是项目的全部。分类只是把仿真数据转化为可展示结果的一步。
+## 12. 一句话复述
 
-第三，`0.98` 不是万能成绩。它只属于当前数据、当前分类目标和当前仿真设置。
-
-第四，公开仓库不是开源授权。组员可以学习、运行、审阅，但不能把项目改名后当成自己的独立成果发布。
-
-## 9. 一句话复述
-
-这个项目用 Geant4 做 XRT 矿物分选仿真，用 Python 分析探测器数据，并完成了本科级别的代码、图表、结果和论文材料闭环。
+这个仓库展示的是一个本科级 Geant4 XRT 仿真项目：它用六种材料的仿真事件数据构造 300 个虚拟样本，在明确训练/测试拆分下完成低吸收组/高吸收组基础分类验证，并把代码、证据、图表和论文说明整理成可学习、可运行、可复查的公开包。

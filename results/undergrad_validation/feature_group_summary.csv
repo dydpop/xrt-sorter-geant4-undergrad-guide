@@ -1,0 +1,5 @@
+group_label,split,primary_transmission_rate_count,primary_transmission_rate_mean,primary_transmission_rate_std,primary_transmission_rate_min,primary_transmission_rate_max,mean_detector_edep_keV_count,mean_detector_edep_keV_mean,mean_detector_edep_keV_std,mean_detector_edep_keV_min,mean_detector_edep_keV_max,detector_gamma_rate_count,detector_gamma_rate_mean,detector_gamma_rate_std,detector_gamma_rate_min,detector_gamma_rate_max
+high_absorption,test,75,0.04013333333333333,0.021591623334020035,0.0,0.09,75,0.25032255853333335,0.5128512786004472,0.0,2.5662096500000002,75,0.04013333333333333,0.021591623334020035,0.0,0.09
+high_absorption,train,75,0.04,0.017706312815307244,0.0,0.08,75,0.27067679306666664,0.37405760544224265,0.0,1.35,75,0.04,0.017706312815307244,0.0,0.08
+low_absorption,test,75,0.3036,0.0780789621109574,0.15,0.49,75,3.3534961269333334,1.5618932384039537,0.0,7.53612405,75,0.3036,0.0780789621109574,0.15,0.49
+low_absorption,train,75,0.30626666666666663,0.0665516124306325,0.16,0.46,75,3.3202508764,1.6211205710769658,0.35605668,7.47675312,75,0.30626666666666663,0.0665516124306325,0.16,0.46

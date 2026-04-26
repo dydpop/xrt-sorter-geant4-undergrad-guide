@@ -1,4 +1,4 @@
 method,n_features,accuracy
-A_threshold_transmission_only,1,0.9733333333333334
-B_logistic_transmission_only,1,0.98
-C_logistic_transmission_edep_gamma,3,0.98
+A_threshold_transmission_only,1,0.98
+B_logistic_transmission_only,1,0.9866666666666667
+C_logistic_transmission_edep_gamma,3,0.9933333333333333

@@ -1,10 +1,19 @@
 {
   "package_name": "xrt-sorter-geant4-undergrad-guide",
   "generated_on": "2026-04-26",
-  "purpose": "Public undergraduate Geant4 XRT simulation guide package for project-team learning, review, and local reproduction.",
+  "purpose": "Public undergraduate Geant4 XRT simulation guide package for project-team learning, review, local reproduction, and validation evidence inspection.",
   "visibility_target": "public",
   "license_policy": "custom all-rights-reserved learning/review permission; see LICENSE.md and NOTICE.md",
-  "claim_boundary": "simulation-only undergraduate package; 0.98 accuracy is limited to simulated coarse absorption-group classification",
+  "claim_boundary": "simulation-only undergraduate package; 0.9933 is the current evidence-package test accuracy for simulated coarse absorption-group classification, not equipment or all-mineral validation",
+  "validation_evidence": {
+    "directory": "results/undergrad_validation",
+    "materials": 6,
+    "events_per_material": 5000,
+    "virtual_samples_per_material": 50,
+    "train_samples": 150,
+    "test_samples": 150,
+    "best_current_test_accuracy": 0.9933333333333333
+  },
   "sections": {
     "source_code": [
       "include/",
@@ -31,7 +40,7 @@
       "paper/"
     ]
   },
-  "file_count": 65,
+  "file_count": 75,
   "files": [
     {
       "path": ".gitignore",
@@ -60,13 +69,13 @@
     },
     {
       "path": "README.md",
-      "size_bytes": 4617,
-      "sha256": "f84f55fc750e124da071434ab96ed848ec15be166333558ad346de321f6ef2aa"
+      "size_bytes": 5293,
+      "sha256": "a30937b870f05a0d130162c77460e8c06f4da987151cb83afd997afdc43d0147"
     },
     {
       "path": "analysis/classify_absorption_groups.py",
-      "size_bytes": 6725,
-      "sha256": "eae705fc132b51050ddc4e27c79bb5ce3903cc7256ece14dd4271c6ef50501ec"
+      "size_bytes": 13995,
+      "sha256": "d75e2e5468f067c6b9ecf16aa30b043f7050d99a8a6a9aece9cfb3cbac454cc8"
     },
     {
       "path": "analysis/configs/run_research.mac",
@@ -75,33 +84,33 @@
     },
     {
       "path": "docs/FILE_MAP_zh.md",
-      "size_bytes": 3133,
-      "sha256": "479001cb194aa1de55fde4cc0afb924d3a6ed618eed54a706a4778a2c7febcd0"
+      "size_bytes": 5412,
+      "sha256": "225322e503bda49b12084e7ad7aa304c947afa89b22096627d770a9304c951a0"
     },
     {
       "path": "docs/FINAL_ELEMENTARY_REVIEW_zh.md",
-      "size_bytes": 2410,
-      "sha256": "5d3f3ea7fd72390d6a3d2b077e93e56e9e3a64df452b43fd1833600cbd96860b"
+      "size_bytes": 1999,
+      "sha256": "5f08d5465e1c7712cee502cac55bfccc7b70316ff052a710ef33a6fa6b6e3275"
     },
     {
       "path": "docs/GLOSSARY_BY_FIRST_APPEARANCE.md",
-      "size_bytes": 6016,
-      "sha256": "d1a50f1e7fa77d1e51a19e9811685675c3d3bdb4e96842797eedfed3db3eb7f0"
+      "size_bytes": 6383,
+      "sha256": "cd4ac4919a8e57b5d5660e757904c30acb8b50643b18dffd9fb37a7d2b814701"
     },
     {
       "path": "docs/RUN_LOCALLY_zh.md",
-      "size_bytes": 7019,
-      "sha256": "ac921dcc6adeabde7e005121a7c4e0cebd8e373e1513c82c8868877baea655ff"
+      "size_bytes": 5587,
+      "sha256": "8836c7c0564b3aff819e4877729341ae092f89fdad591b39cad2f3694ec5a2ec"
     },
     {
       "path": "docs/TEAM_GUIDE_zh.md",
-      "size_bytes": 5065,
-      "sha256": "a88617f84944b7f1be3c335985a91f2cbcf3b6e1588dce2039e9ab7059c97a36"
+      "size_bytes": 11574,
+      "sha256": "f2e04c9aff16c6d8b7e4125bfb6082fdfe727443e402b95fc58b2b3ce1c62a78"
     },
     {
       "path": "docs/public_explainer_zh.md",
-      "size_bytes": 2870,
-      "sha256": "e483a1928bcd9a3ad721704998ee61495d5b8ee2eaee600e98e5a015853ec8ce"
+      "size_bytes": 1876,
+      "sha256": "810bb92cc4ea2aae32d31399ad745f0a0820c3f44ced2f0853c93aa987e01013"
     },
     {
       "path": "exampleB1.cc",
@@ -110,8 +119,8 @@
     },
     {
       "path": "figures/elementary_absorption_accuracy.png",
-      "size_bytes": 49969,
-      "sha256": "756542bd7e621be90244912c6dca0d15e4beb96f658e379465796385ddf9f573"
+      "size_bytes": 84755,
+      "sha256": "90aae1df0e871dc6b889c6e35d186f402c5b1f45e8c721019fc9150e17a996da"
     },
     {
       "path": "figures/elementary_backup_tiers.png",
@@ -175,58 +184,58 @@
     },
     {
       "path": "paper/abstract_en.md",
-      "size_bytes": 950,
-      "sha256": "7c1311ac485af87664b78519be841ce746f95194a0a4f35e04c4247beca190cc"
+      "size_bytes": 1455,
+      "sha256": "793356b72604d27805536e877f0418d9aa48d7c74efa924a7a33cf0eaa1c1249"
     },
     {
       "path": "paper/abstract_zh.md",
-      "size_bytes": 927,
-      "sha256": "7cde4648c3c0e1557c06ad67dff34ccb45066391ac35c5b761539eb5abfba1ec"
+      "size_bytes": 1174,
+      "sha256": "428b72da1d804a44c2c390f9ba9c57f168e212cabd81397652e66e4073646bb4"
     },
     {
       "path": "paper/figure_list.md",
-      "size_bytes": 944,
-      "sha256": "a92129f6e9acad0fe356b5d9d0afc29bfd3f9fd3ce4dfebd250e7fdbcc282e70"
+      "size_bytes": 1153,
+      "sha256": "b1779d7fc5133c075c38f350c202be84e1459bef0217b95f464cd799ba8399f4"
     },
     {
       "path": "paper/main_thesis_HIT_revised_zh.md",
-      "size_bytes": 4351,
-      "sha256": "83f2182fe40221f8f661fefb5082708e906df60420ddb8af6471942ca7a8459b"
+      "size_bytes": 17533,
+      "sha256": "c69b7b1ec0d8a4c41bdd718d22db6c3b9e1967271b3f7dd35a466ab27fb23227"
     },
     {
       "path": "paper/references.md",
-      "size_bytes": 486,
-      "sha256": "376c4316d299e5acde71d7d2145e027255afd1addb915ffbda9cf6abbd8de07a"
+      "size_bytes": 1777,
+      "sha256": "59c7016492522c66ec7f3fbe2c8cff955ab8a14e37bb6b6ea949d5e07dc02220"
     },
     {
       "path": "paper/reproducibility.md",
-      "size_bytes": 1932,
-      "sha256": "53f42c5a5c19089ca8e11ac4f919b92320f1e6b2149342e42a197d98fc11ec42"
+      "size_bytes": 3570,
+      "sha256": "361c5349150b07c32fe5d369f02869d015e53a1ba618d397f62300d02a392902"
     },
     {
       "path": "paper/symbols.md",
-      "size_bytes": 463,
-      "sha256": "04c5c9ecd9f308a75f0b2a2c41045f8cc3245ba4aa857c66b89e9ca1125d1e72"
+      "size_bytes": 866,
+      "sha256": "e10eead5c50b9e01b47531e2bd502f28673bf92bb14d2ec87a8bffdd46860c6f"
     },
     {
       "path": "results/absorption_group_classification_summary.csv",
-      "size_bytes": 156,
-      "sha256": "e9fd9a0be6659e36c2ba9257199aa13e5e4d2320997df8dfb1240e7fee668631"
+      "size_bytes": 170,
+      "sha256": "0d192ff1de8fc8e55362e41ce4591aa073ef7dc76774384b493bfbcfcd77db3b"
     },
     {
       "path": "results/absorption_group_confusion_logistic_1f.csv",
       "size_bytes": 73,
-      "sha256": "1575afd6ce067871aa694f25b3e91a55a008ddbf39c35bfb10e20f8562805e8b"
+      "sha256": "5d5b3e74ed23fefbd9d63072ea51ac1d4267816e5d17734a64d296cc6f758cee"
     },
     {
       "path": "results/absorption_group_confusion_logistic_3f.csv",
       "size_bytes": 73,
-      "sha256": "1575afd6ce067871aa694f25b3e91a55a008ddbf39c35bfb10e20f8562805e8b"
+      "sha256": "bd81e918478b1e9d9a9685cfd862397a8f392ccc520c40cbc1e7d27515920582"
     },
     {
       "path": "results/absorption_group_confusion_threshold.csv",
       "size_bytes": 73,
-      "sha256": "8a450cd5aa6df92d7325d1c00f65915cb94c28f48a88364a025f1cee866708a2"
+      "sha256": "1575afd6ce067871aa694f25b3e91a55a008ddbf39c35bfb10e20f8562805e8b"
     },
     {
       "path": "results/directscatter_feature_comparison.csv",
@@ -235,13 +244,13 @@
     },
     {
       "path": "results/elementary_completion_status.json",
-      "size_bytes": 445,
-      "sha256": "ee1737756bc068e4c111b20ee6cfaadb9ccba3f1c50f08fbef551d69a5353db4"
+      "size_bytes": 567,
+      "sha256": "870e5c8ac859ed4158bd49b3ad5dc2aa83409131a506fd9e080cf4ae5e16d230"
     },
     {
       "path": "results/elementary_demo_report_zh.md",
-      "size_bytes": 1546,
-      "sha256": "f473e0cc8b3818c581036ad482e7d9d61894a426c3550fa0614c9cf0049ddda3"
+      "size_bytes": 2101,
+      "sha256": "9d8b969eeff76d9e645176b71081279678a113132ebc6be3badeeb63d98a1e6e"
     },
     {
       "path": "results/high_absorption_1cm_feature_comparison.csv",
@@ -257,6 +266,56 @@
       "path": "results/real_spectrum_threshold_confusion_matrix.csv",
       "size_bytes": 114,
       "sha256": "06176feec23e2357a2e95c18b39cf2b1afc5faee9aa550f5381b3a17074d207b"
+    },
+    {
+      "path": "results/undergrad_validation/absorption_group_classification_summary.csv",
+      "size_bytes": 528,
+      "sha256": "08ed8de73c5f688bcb9c839e74caf7b38974c8ac7745b208442e330940e0f51c"
+    },
+    {
+      "path": "results/undergrad_validation/absorption_group_confusion_logistic_1f.csv",
+      "size_bytes": 73,
+      "sha256": "5d5b3e74ed23fefbd9d63072ea51ac1d4267816e5d17734a64d296cc6f758cee"
+    },
+    {
+      "path": "results/undergrad_validation/absorption_group_confusion_logistic_3f.csv",
+      "size_bytes": 73,
+      "sha256": "bd81e918478b1e9d9a9685cfd862397a8f392ccc520c40cbc1e7d27515920582"
+    },
+    {
+      "path": "results/undergrad_validation/absorption_group_confusion_threshold.csv",
+      "size_bytes": 73,
+      "sha256": "1575afd6ce067871aa694f25b3e91a55a008ddbf39c35bfb10e20f8562805e8b"
+    },
+    {
+      "path": "results/undergrad_validation/absorption_group_virtual_samples.csv",
+      "size_bytes": 22649,
+      "sha256": "8ed31ca674cfb95105bc295fe6b26625396bfd5efe29a6f0cbeaf384741c101e"
+    },
+    {
+      "path": "results/undergrad_validation/event_row_summary.csv",
+      "size_bytes": 761,
+      "sha256": "b028b236c5e13b0fd7aab96d634c1568f9a16482b1130adae0a8a354600c145e"
+    },
+    {
+      "path": "results/undergrad_validation/feature_group_summary.csv",
+      "size_bytes": 1110,
+      "sha256": "d928421fa7a5e262a6332d6f5829be55041ea5557e657f0ee6dce4cf55c3b32d"
+    },
+    {
+      "path": "results/undergrad_validation/test_predictions.csv",
+      "size_bytes": 44912,
+      "sha256": "15e7320af39fc4101a7b7a906c77976bad79399e46b537b8525e4349320b9a3a"
+    },
+    {
+      "path": "results/undergrad_validation/train_test_split_samples.csv",
+      "size_bytes": 24305,
+      "sha256": "7a93894ed5012d222d94fcee80206c1e206813695799d1e166138b2f0ef9fe8a"
+    },
+    {
+      "path": "results/undergrad_validation/validation_manifest.json",
+      "size_bytes": 5283,
+      "sha256": "9b11ece77500051f0b25aa22163a387731f2c19b053f00965e8f0b55d432313f"
     },
     {
       "path": "run1.mac",
