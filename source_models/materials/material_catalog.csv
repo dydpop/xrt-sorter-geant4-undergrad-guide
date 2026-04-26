@@ -1,7 +1,11 @@
-material_name,formula,density_g_cm3,category,notes
-Quartz,SiO2,2.65,low_absorption,baseline_silicate
-Calcite,CaCO3,2.71,low_absorption,carbonate
-Orthoclase,KAlSi3O8,2.56,low_absorption,feldspar
-Hematite,Fe2O3,5.26,high_absorption,iron_ore
-Magnetite,Fe3O4,5.17,high_absorption,iron_ore
-Pyrite,FeS2,5.00,high_absorption_optional,sulfide_optional
+material_name,formula,density_g_cm3,category,group_label,enabled_for_undergrad,event_file,config_file,evidence_status,notes
+Quartz,SiO2,2.65,silicate,low_absorption,true,xrt_real_source_quartz_events.csv,source_models/config/undergrad_batch/quartz.txt,public_validation,baseline low-absorption silicate
+Calcite,CaCO3,2.71,carbonate,low_absorption,true,xrt_real_source_calcite_events.csv,source_models/config/undergrad_batch/calcite.txt,public_validation,carbonate low-absorption reference
+Orthoclase,KAlSi3O8,2.56,feldspar,low_absorption,true,xrt_real_source_orthoclase_events.csv,source_models/config/undergrad_batch/orthoclase.txt,public_validation,potassium feldspar low-absorption reference
+Albite,NaAlSi3O8,2.62,feldspar,low_absorption,true,xrt_real_source_albite_events.csv,source_models/config/undergrad_batch/albite.txt,public_validation,added catalog-driven low-absorption feldspar example
+Dolomite,CaMg(CO3)2,2.85,carbonate,low_absorption,true,xrt_real_source_dolomite_events.csv,source_models/config/undergrad_batch/dolomite.txt,public_validation,added catalog-driven carbonate example
+Pyrite,FeS2,5.00,sulfide,high_absorption,true,xrt_real_source_pyrite_events.csv,source_models/config/undergrad_batch/pyrite.txt,public_validation,sulfide high-absorption reference
+Hematite,Fe2O3,5.26,iron_oxide,high_absorption,true,xrt_real_source_hematite_events.csv,source_models/config/undergrad_batch/hematite.txt,public_validation,iron ore high-absorption reference
+Magnetite,Fe3O4,5.17,iron_oxide,high_absorption,true,xrt_real_source_magnetite_events.csv,source_models/config/undergrad_batch/magnetite.txt,public_validation,iron ore high-absorption reference
+Chalcopyrite,CuFeS2,4.20,sulfide,high_absorption,true,xrt_real_source_chalcopyrite_events.csv,source_models/config/undergrad_batch/chalcopyrite.txt,public_validation,added catalog-driven copper iron sulfide example
+Galena,PbS,7.50,sulfide,high_absorption,true,xrt_real_source_galena_events.csv,source_models/config/undergrad_batch/galena.txt,public_validation,added catalog-driven lead sulfide example

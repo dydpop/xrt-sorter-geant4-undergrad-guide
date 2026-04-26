@@ -13,11 +13,14 @@
 - **结果可追溯**：新增 `results/undergrad_validation/`，包含事件行数、虚拟样本、训练/测试拆分、混淆矩阵和 manifest。
 - **分类可解释**：核心依据是透射率、能量沉积和 gamma 命中率等物理相关特征，不是黑箱结果。
 - **本科级成果闭环**：有代码、有图、有结果表、有论文稿、有复现说明，适合答辩、组内学习和二次扩展。
-- **边界清楚**：最高 `0.9933` accuracy 只表示当前六材料仿真证据包上的粗粒度吸收组测试结果，不等于真实设备效果。
+- **材料库可扩展**：公开材料目录现在驱动十种材料的本科验证，新增材料需要材料定义、配置文件和重新生成证据包。
+- **边界清楚**：最高 `0.9960` accuracy 只表示当前十材料仿真证据包上的粗粒度吸收组测试结果，不等于真实设备效果。
 
 ## 先看哪里
 
 第一次阅读建议按这个顺序走：先用 2 分钟扫一遍本页，再读 `docs/TEAM_GUIDE_zh.md`，遇到术语查 `docs/GLOSSARY_BY_FIRST_APPEARANCE.md`，想知道文件位置看 `docs/FILE_MAP_zh.md`，准备上机再看 `docs/RUN_LOCALLY_zh.md`。
+
+如果你暂时不运行代码，可以用 10 分钟完成一次只读理解：先看本页的图文导览，再打开 `results/undergrad_validation/validation_manifest.json` 看材料数、样本数和边界，最后读 `docs/TEAM_GUIDE_zh.md` 中“为什么六材料足够本科验证，但十材料仍不等于产品覆盖”的章节。
 
 | 你是谁 | 推荐入口 |
 | --- | --- |
@@ -44,7 +47,7 @@
 
 ### 3. 基础分类已有可复查证据
 
-当前证据包包含六种材料，每种材料 5000 个 events，每 100 个 events 聚合为 1 个虚拟样本，共 300 个虚拟样本。每种材料前 25 个样本训练、后 25 个样本测试，总测试样本为 150 个。当前三特征 Logistic Regression 在测试集上正确 149 个样本，accuracy 为 `0.9933`。
+当前证据包包含十种材料，每种材料 5000 个 events，每 100 个 events 聚合为 1 个虚拟样本，共 500 个虚拟样本。每种材料前 25 个样本训练、后 25 个样本测试，总测试样本为 250 个。当前三特征 Logistic Regression 在测试集上正确 249 个样本，accuracy 为 `0.9960`。
 
 ![基础分类精度](figures/elementary_absorption_accuracy.png)
 
@@ -52,7 +55,7 @@
 
 ```mermaid
 flowchart LR
-    A["六材料配置"] --> B["Geant4 C++ 仿真"]
+    A["材料目录与十材料配置"] --> B["Geant4 C++ 仿真"]
     B --> C["CSV 事件数据"]
     C --> D["Python 虚拟样本与特征"]
     D --> E["训练/测试拆分"]
@@ -62,7 +65,7 @@ flowchart LR
 
 ## 快速运行
 
-如果你的电脑已经安装好 Geant4、CMake、C++ 编译器和 Python 依赖，可以从仓库根目录运行六材料公开复现配置：
+如果你的电脑已经安装好 Geant4、CMake、C++ 编译器和 Python 依赖，可以从仓库根目录运行材料目录启用的十材料公开复现配置：
 
 ```bash
 pip install pandas scikit-learn
@@ -70,7 +73,7 @@ cmake -S . -B build
 cmake --build build
 cd build
 
-for material in quartz orthoclase calcite pyrite hematite magnetite; do
+for material in quartz calcite orthoclase albite dolomite pyrite hematite magnetite chalcopyrite galena; do
   XRT_EXPERIMENT_CONFIG=../source_models/config/undergrad_batch/${material}.txt \
     ./xrt_sorter ../analysis/configs/run_research.mac
 done
@@ -80,6 +83,8 @@ python analysis/classify_absorption_groups.py
 ```
 
 如果运行时提示找不到 Geant4 动态库，请先加载本机 Geant4 环境脚本，例如 `source /path/to/geant4-install/bin/geant4.sh`。更详细的依赖和排错见 `docs/RUN_LOCALLY_zh.md`。
+
+运行成功后，最少检查三件事：`event_row_summary.csv` 中十种材料都是 5000 events，`validation_manifest.json` 中训练/测试样本分别为 250/250，`absorption_group_classification_summary.csv` 中三特征 Logistic Regression 为 `249/250 = 0.9960`。复跑有随机性，数字可以小幅波动。
 
 ## 目录结构
 
@@ -98,7 +103,7 @@ paper/                本科论文式材料
 
 本仓库公开的是本科级仿真项目成果。它可以说明：我们完成了 Geant4 XRT 仿真系统、数据输出、基础特征分析、明确训练/测试拆分和仿真数据上的粗粒度分类验证。
 
-它不应该被解释为：已经完成现场设备验证、可直接用于分选设备控制、已经覆盖复杂矿石流的全部情况、或可以对世界上所有矿物都保持同样准确率。
+最初六材料已经足够证明本科项目的基本闭环；当前十材料证据包进一步说明材料库和配置流程可以扩展。但它不应该被解释为：已经完成现场设备验证、可直接用于分选设备控制、已经覆盖复杂矿石流的全部情况、或可以对世界上所有矿物都保持同样准确率。
 
 ## 权利声明
 

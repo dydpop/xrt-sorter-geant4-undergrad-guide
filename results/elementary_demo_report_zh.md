@@ -21,7 +21,7 @@ flowchart LR
 | 文件 | 说明 |
 | --- | --- |
 | `undergrad_validation/validation_manifest.json` | 当前证据包总说明 |
-| `undergrad_validation/event_row_summary.csv` | 六材料事件行数检查 |
+| `undergrad_validation/event_row_summary.csv` | 十材料事件行数检查 |
 | `undergrad_validation/train_test_split_samples.csv` | 训练/测试拆分证据 |
 | `undergrad_validation/absorption_group_classification_summary.csv` | 分类方法和 accuracy 汇总 |
 | `undergrad_validation/absorption_group_confusion_threshold.csv` | 阈值法混淆矩阵 |
@@ -29,7 +29,7 @@ flowchart LR
 | `undergrad_validation/absorption_group_confusion_logistic_3f.csv` | 三特征 Logistic Regression 混淆矩阵 |
 | `directscatter_feature_comparison.csv` | 直接/散射特征对比 |
 
-当前证据包显示：每种材料 5000 个 events、50 个虚拟样本；训练集 150 个样本、测试集 150 个样本。三特征 Logistic Regression 在测试集上正确 149 个样本，accuracy 为 `0.9933`。
+当前证据包显示：每种材料 5000 个 events、50 个虚拟样本；训练集 250 个样本、测试集 250 个样本。三特征 Logistic Regression 在测试集上正确 249 个样本，accuracy 为 `0.9960`。
 
 ## 图表
 
@@ -43,4 +43,4 @@ flowchart LR
 
 ## 结果边界
 
-本报告支持“Geant4 XRT 仿真原型系统与基础分类验证”结论。当前结果只对应公开仓库内的六材料仿真任务和粗粒度分类目标，不代表所有材料、所有设备条件或所有现场流程。
+本报告支持“Geant4 XRT 仿真原型系统与基础分类验证”结论。当前结果只对应公开仓库内的十材料仿真任务和粗粒度分类目标，不代表所有材料、所有设备条件或所有现场流程。

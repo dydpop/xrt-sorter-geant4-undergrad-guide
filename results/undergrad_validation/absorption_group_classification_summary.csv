@@ -1,4 +1,4 @@
 method,model_family,n_features,feature_columns,train_samples,test_samples,correct_test_samples,accuracy,threshold
-A_threshold_transmission_only,threshold,1,primary_transmission_rate,150,150,147,0.98,0.17313333333333333
-B_logistic_transmission_only,standard_scaler_plus_logistic_regression,1,primary_transmission_rate,150,150,148,0.9866666666666667,
-C_logistic_transmission_edep_gamma,standard_scaler_plus_logistic_regression,3,primary_transmission_rate;mean_detector_edep_keV;detector_gamma_rate,150,150,149,0.9933333333333333,
+A_threshold_transmission_only,threshold,1,primary_transmission_rate,250,250,246,0.984,0.17452
+B_logistic_transmission_only,standard_scaler_plus_logistic_regression,1,primary_transmission_rate,250,250,248,0.992,
+C_logistic_transmission_edep_gamma,standard_scaler_plus_logistic_regression,3,primary_transmission_rate;mean_detector_edep_keV;detector_gamma_rate,250,250,249,0.996,

@@ -1,6 +1,6 @@
 # 本机运行指南
 
-这份文档面向组员本机复现。它解释如何配置 Geant4/CMake/Python，如何运行六材料仿真，以及如何生成 `results/undergrad_validation/` 证据包。
+这份文档面向组员本机复现。它解释如何配置 Geant4/CMake/Python，如何运行材料目录启用的十材料仿真，以及如何生成 `results/undergrad_validation/` 证据包。
 
 ## 1. 需要安装什么
 
@@ -67,14 +67,20 @@ cmake --build --preset local-geant4
 
 编译成功后，`build/` 下会出现可执行程序 `xrt_sorter`。`build/` 是本机生成目录，不提交到 GitHub。
 
-## 4. 运行六材料仿真
+## 4. 运行十材料仿真
 
-公开分类脚本需要六种材料的事件文件，所以不要只跑默认配置。进入 `build/` 后运行：
+公开分类脚本会读取 `source_models/materials/material_catalog.csv` 中 `enabled_for_undergrad=true` 的材料。当前公开证据包启用了十种单一材料：
+
+```text
+quartz calcite orthoclase albite dolomite pyrite hematite magnetite chalcopyrite galena
+```
+
+进入 `build/` 后运行：
 
 ```bash
 cd build
 
-for material in quartz orthoclase calcite pyrite hematite magnetite; do
+for material in quartz calcite orthoclase albite dolomite pyrite hematite magnetite chalcopyrite galena; do
   XRT_EXPERIMENT_CONFIG=../source_models/config/undergrad_batch/${material}.txt \
     ./xrt_sorter ../analysis/configs/run_research.mac
 done
@@ -99,12 +105,13 @@ pip install pandas scikit-learn
 python analysis/classify_absorption_groups.py
 ```
 
-脚本会读取 `build/` 下六个 `*_events.csv`，并生成：
+脚本会读取 `build/` 下十个 `*_events.csv`，并生成：
 
 - `results/undergrad_validation/event_row_summary.csv`
 - `results/undergrad_validation/absorption_group_virtual_samples.csv`
 - `results/undergrad_validation/train_test_split_samples.csv`
 - `results/undergrad_validation/feature_group_summary.csv`
+- `results/undergrad_validation/material_feature_summary.csv`
 - `results/undergrad_validation/absorption_group_classification_summary.csv`
 - `results/undergrad_validation/absorption_group_confusion_threshold.csv`
 - `results/undergrad_validation/absorption_group_confusion_logistic_1f.csv`
@@ -118,17 +125,30 @@ python analysis/classify_absorption_groups.py
 
 先打开 `results/undergrad_validation/validation_manifest.json`，确认以下内容：
 
-- 材料数为 6。
+- `enabled_material_count` 为 10。
 - 每种材料 `event_count` 为 5000。
 - 每种材料 `complete_virtual_samples` 为 50。
-- `total_train_samples` 为 150。
-- `total_test_samples` 为 150。
+- `total_train_samples` 为 250。
+- `total_test_samples` 为 250。
 
-再打开 `results/undergrad_validation/absorption_group_classification_summary.csv`。当前提交证据包中，阈值法、单特征 Logistic Regression、三特征 Logistic Regression 的测试 accuracy 分别为 `0.9800`、`0.9867`、`0.9933`。
+再打开 `results/undergrad_validation/absorption_group_classification_summary.csv`。当前提交证据包中，阈值法、单特征 Logistic Regression、三特征 Logistic Regression 的测试 accuracy 分别为 `0.9840`、`0.9920`、`0.9960`，其中三特征方法为 `249/250`。
 
-最后看混淆矩阵。行是真实标签，列是预测标签。它能告诉你错误发生在低吸收组还是高吸收组，比单独看 accuracy 更可靠。
+最后看混淆矩阵。行是真实标签，列是预测标签。当前三特征 Logistic Regression 的混淆矩阵显示：低吸收组 125 个测试样本中 124 个判对，高吸收组 125 个测试样本全部判对。
 
-## 7. 常见问题
+## 7. 如何新增一种材料
+
+新增材料不是只改一个名字。当前最小流程是：
+
+1. 确认 C++ `src/DetectorConstruction.cc` 中已经有该材料的 Geant4 定义；如果没有，需要先补材料元素组成和密度。
+2. 在 `source_models/config/undergrad_batch/` 新增一个配置文件，设置 `ore_primary_material`、`output_prefix`、厚度、源项和探测器参数。
+3. 在 `source_models/materials/material_catalog.csv` 新增一行，填写 `group_label`、`event_file`、`config_file` 和 `enabled_for_undergrad`。
+4. 运行该材料配置，生成新的 `*_events.csv`。
+5. 重新运行 `analysis/classify_absorption_groups.py`，生成新的证据包。
+6. 更新 README、论文和讲解中的材料数、样本数、accuracy 和边界说明。
+
+这叫目录驱动的扩展流程，不等于“世界上任意矿物只改词典就能自动识别”。每个新增材料都需要仿真证据支撑。
+
+## 8. 常见问题
 
 **CMake 找不到 Geant4。**
 先确认 Geant4 已安装，再设置 `Geant4_DIR` 或 `CMAKE_PREFIX_PATH`。VS Code 插件不能替代 Geant4 安装。
@@ -140,11 +160,11 @@ python analysis/classify_absorption_groups.py
 运行 `pip install pandas scikit-learn`，或者在自己的虚拟环境里安装。
 
 **Python 提示缺少某个 `xrt_real_source_*_events.csv`。**
-说明六材料仿真没有跑完整。回到第 4 节，把六个材料都运行一遍。
+说明材料目录启用的配置没有跑完整。回到第 4 节，把十个材料都运行一遍；如果你新增了材料，也要先跑新增材料的 Geant4 配置。
 
 **复跑结果和 GitHub 上数字略有不同。**
 Geant4 仿真有随机性。如果没有固定随机种子，重新生成事件 CSV 后结果可能小幅波动。论文和讲解应以当前提交的 `results/undergrad_validation/` 证据包为准，并说明这个数字不是普适常数。
 
-## 8. 重要边界
+## 9. 重要边界
 
-本仓库结果只说明当前六材料、固定几何、仿真数据、粗粒度吸收组二分类任务下的表现。它不是真实设备指标，不证明能覆盖所有矿物，也不证明能直接用于工业在线控制。
+本仓库结果只说明当前十材料、固定几何、仿真数据、粗粒度吸收组二分类任务下的表现。它不是真实设备指标，不证明能覆盖所有矿物，也不证明能直接用于工业在线控制。

@@ -18,8 +18,8 @@
 | 12 | W 靶 | tungsten target | `w_target_120kV_1mmAl.csv` | 钨靶 X 射线源的能谱描述。 |
 | 13 | 120 kV | 120 kilovolt | `120kV` | X 射线管电压参数，用来限定能谱范围。 |
 | 14 | 能谱 | spectrum | `spectrum_file` | 不同能量的 X 射线占多少比例。 |
-| 15 | 材料目录 | material catalog | `material_catalog.csv` | 记录材料名称、化学式、密度和类别提示的表格。 |
-| 16 | 六材料配置 | six-material configs | `undergrad_batch/*.txt` | Quartz、Orthoclase、Calcite、Pyrite、Hematite、Magnetite 六个公开复现配置。 |
+| 15 | 材料目录 | material catalog | `material_catalog.csv` | 记录材料名称、化学式、密度、分组标签、配置文件、事件文件和证据状态的表格。 |
+| 16 | 十材料配置 | ten-material configs | `undergrad_batch/*.txt` | 当前公开复现配置，包含 5 个低吸收材料和 5 个高吸收材料。 |
 | 17 | `event_id` | event identifier | `event_id` | 仿真事件编号，本次每种材料为 0 到 4999。 |
 | 18 | `detector_edep_keV` | detector energy deposition | `detector_edep_keV` | 当前事件在探测器中沉积的能量，单位 keV。 |
 | 19 | `detector_gamma_entries` | detector gamma entries | `detector_gamma_entries` | 当前事件中 gamma 进入探测器的计数。 |
@@ -40,7 +40,7 @@
 | 34 | Logistic Regression | logistic regression | `LogisticRegression` | 经典二分类方法，用特征学习线性分类边界。 |
 | 35 | accuracy | accuracy | `accuracy_score`, `accuracy` | 测试样本中预测正确的比例。 |
 | 36 | 混淆矩阵 | confusion matrix | `confusion_matrix`, `confusion*.csv` | 显示真实类别和预测类别如何对应的表。 |
-| 37 | 测试集分母 | test denominator | `test_samples` | 本项目为 150 个测试虚拟样本，不是 event 数。 |
+| 37 | 测试集分母 | test denominator | `test_samples` | 当前证据包为 250 个测试虚拟样本，不是 event 数。 |
 | 38 | 近似直接透射 | direct primary | `is_direct_primary` | primary gamma 到达探测器且偏转角小于 1 度的工程近似。 |
 | 39 | 散射后透射 | scattered primary | `is_scattered_primary` | primary gamma 到达探测器但偏转角不小于 1 度的工程近似。 |
 | 40 | CMake | CMake | `cmake`, `CMakeLists.txt` | C++ 项目构建工具，用来生成编译配置。 |
@@ -50,3 +50,14 @@
 | 44 | 验证证据包 | validation package | `results/undergrad_validation/` | 本轮整理出的紧凑证据目录，用于追溯数据规模、拆分和结果。 |
 | 45 | manifest | manifest | `validation_manifest.json` | 记录证据包生成方式、样本政策、软件版本和结论边界的 JSON 文件。 |
 | 46 | 本科级边界 | undergraduate boundary | `claim_boundary` | 说明本项目是仿真和基础分类验证，不是工业设备验证。 |
+| 47 | 物理/化学特征 | physical/chemical descriptors | `formula`, `density_g_cm3`, `primary_transmission_rate` | 用材料组成、密度和仿真响应描述材料，而不是只记住材料名字。 |
+| 48 | 候选检索 | candidate retrieval | material dictionary lookup | 后续研究可以把仿真特征和矿物字典结合，给出候选材料或人工复核线索；当前公开仓库只做本科级验证。 |
+
+## 常见误解
+
+| 误解 | 正确理解 |
+| --- | --- |
+| 一个 event 就是一个机器学习样本 | 当前项目每 100 个 event 聚合为 1 个虚拟样本。 |
+| `0.9960` 表示所有矿物都能分对 | 它只表示当前十材料、固定几何、仿真数据、粗粒度吸收组测试集上的结果。 |
+| 仿真数据等于真实设备数据 | 仿真能降低探索成本，但不能替代真实设备、真实矿流和现场验证。 |
+| 新增材料只要改词典就够 | 当前至少还需要 C++ 材料定义、配置文件、Geant4 运行和新的证据包。 |

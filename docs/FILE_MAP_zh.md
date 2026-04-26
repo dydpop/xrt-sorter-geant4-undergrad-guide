@@ -17,13 +17,13 @@
 
 ## 讲解、运行、论文、开发入口
 
-| 类型 | 推荐文件 |
-| --- | --- |
-| 讲解入口 | `docs/TEAM_GUIDE_zh.md`, `docs/GLOSSARY_BY_FIRST_APPEARANCE.md`, `docs/public_explainer_zh.md` |
-| 运行入口 | `docs/RUN_LOCALLY_zh.md`, `analysis/configs/run_research.mac`, `source_models/config/undergrad_batch/*.txt` |
-| 论文入口 | `paper/main_thesis_HIT_revised_zh.md`, `paper/reproducibility.md`, `paper/references.md` |
-| 开发入口 | `exampleB1.cc`, `include/`, `src/`, `analysis/classify_absorption_groups.py` |
-| 证据入口 | `results/undergrad_validation/`, `figures/` |
+| 类型 | 推荐文件 | 新手是否需要打开 |
+| --- | --- | --- |
+| 讲解入口 | `docs/TEAM_GUIDE_zh.md`, `docs/GLOSSARY_BY_FIRST_APPEARANCE.md`, `docs/public_explainer_zh.md` | 必须读 |
+| 运行入口 | `docs/RUN_LOCALLY_zh.md`, `analysis/configs/run_research.mac`, `source_models/config/undergrad_batch/*.txt` | 准备复现时读 |
+| 论文入口 | `paper/main_thesis_HIT_revised_zh.md`, `paper/reproducibility.md`, `paper/references.md` | 写论文/答辩时读 |
+| 开发入口 | `exampleB1.cc`, `include/`, `src/`, `analysis/classify_absorption_groups.py` | 需要改代码时读 |
+| 证据入口 | `results/undergrad_validation/`, `figures/` | 必须会查 |
 
 ## C++ 仿真代码
 
@@ -42,28 +42,29 @@
 | 路径 | 用途 |
 | --- | --- |
 | `source_models/config/experiment_config.txt` | 默认实验配置示例。 |
-| `source_models/config/undergrad_batch/` | 六材料公开复现配置，输出文件名与 Python 分类脚本匹配。 |
+| `source_models/config/undergrad_batch/` | 十材料公开复现配置，输出文件名与材料目录和 Python 分类脚本匹配。 |
 | `source_models/config/source_config.txt` | 源项配置示例。 |
-| `source_models/materials/material_catalog.csv` | 矿物材料表，记录材料名称、化学式、密度和类别提示。 |
+| `source_models/materials/material_catalog.csv` | 矿物材料表，记录材料名称、化学式、密度、分组标签、配置文件和证据状态，是 Python 分类脚本读取的材料索引。 |
 | `source_models/spectra/w_target_120kV_1mmAl.csv` | W 靶 120 kV X 射线能谱。 |
 
 ## Python 分析
 
 | 路径 | 用途 |
 | --- | --- |
-| `analysis/classify_absorption_groups.py` | 读取六材料事件 CSV，构造虚拟样本，划分训练/测试集，运行阈值法和 Logistic Regression，并生成验证证据包。 |
+| `analysis/classify_absorption_groups.py` | 读取材料目录启用的事件 CSV，构造虚拟样本，划分训练/测试集，运行阈值法和 Logistic Regression，并生成验证证据包。 |
 | `analysis/configs/run_research.mac` | 批量仿真运行宏，核心命令为 `/run/beamOn 5000`。 |
 
-运行 Python 分类前，需要先通过 Geant4 在 `build/` 目录下生成六个 `xrt_real_source_*_events.csv` 文件。
+运行 Python 分类前，需要先通过 Geant4 在 `build/` 目录下生成材料目录启用的十个 `xrt_real_source_*_events.csv` 文件。
 
 ## 结果和图表
 
 | 路径 | 用途 |
 | --- | --- |
 | `results/undergrad_validation/validation_manifest.json` | 当前证据包的总说明，记录材料、样本政策、训练/测试规模、软件版本和边界。 |
-| `results/undergrad_validation/event_row_summary.csv` | 六材料事件行数检查，每种材料 5000 events。 |
-| `results/undergrad_validation/absorption_group_virtual_samples.csv` | 300 个虚拟样本表，每 100 个 event 聚合成一个样本。 |
+| `results/undergrad_validation/event_row_summary.csv` | 十材料事件行数检查，每种材料 5000 events。 |
+| `results/undergrad_validation/absorption_group_virtual_samples.csv` | 500 个虚拟样本表，每 100 个 event 聚合成一个样本。 |
 | `results/undergrad_validation/train_test_split_samples.csv` | 每个虚拟样本的训练/测试归属。 |
+| `results/undergrad_validation/material_feature_summary.csv` | 按材料统计透射率、能量沉积和 gamma 命中率，便于解释材料差异。 |
 | `results/undergrad_validation/absorption_group_classification_summary.csv` | 分类方法汇总，包含测试样本数、正确数和 accuracy。 |
 | `results/undergrad_validation/*confusion*.csv` | 混淆矩阵，显示分类错在低吸收组还是高吸收组。 |
 | `results/undergrad_validation/test_predictions.csv` | 测试集逐样本预测结果。 |
@@ -86,4 +87,4 @@
 
 ## 不在公开仓库里的内容
 
-公开仓库只保留本科级成果，不放内部探索路线、未公开讨论、个人备份路径和不适合组员直接学习的中间材料。`build/`、`.vscode/` 和 `CMakeUserPresets.json` 属于本机运行产物或本机配置，不作为公开提交内容。
+公开仓库只保留本科级成果，不放内部探索路线、未公开讨论、个人备份路径和不适合组员直接学习的中间材料。`build/`、`.vscode/`、`analysis/__pycache__/` 和 `CMakeUserPresets.json` 属于本机运行产物或本机配置，不作为公开提交内容。
