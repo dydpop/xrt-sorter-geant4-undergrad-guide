@@ -1,0 +1,132 @@
+{
+  "package": "xrt-sorter-geant4-undergrad-guide",
+  "generated_by": "analysis/material_sorting.py",
+  "generated_at_utc": "2026-04-26T16:40:55+00:00",
+  "data_source": "legacy_undergrad_10mm_spectrum",
+  "matrix_raw_status": {
+    "raw_dir": "build/material_sorting_runs",
+    "metadata_files_found": 3,
+    "materials_found": [
+      "Quartz"
+    ],
+    "complete_target_material_set": false
+  },
+  "table_mode": "single_source",
+  "split_strategy": "within_run_half_split",
+  "target": "ten known material classes plus review gate",
+  "materials": [
+    "Quartz",
+    "Calcite",
+    "Orthoclase",
+    "Albite",
+    "Dolomite",
+    "Pyrite",
+    "Hematite",
+    "Magnetite",
+    "Chalcopyrite",
+    "Galena"
+  ],
+  "sample_policy": {
+    "photons_per_virtual_sample": 100,
+    "raw_runs": 10,
+    "long_samples": 500,
+    "model_rows": 500,
+    "train_rows": 250,
+    "test_rows": 250
+  },
+  "feature_policy": {
+    "feature_count": 35,
+    "feature_columns": [
+      "edep_sum",
+      "edep_mean",
+      "edep_std",
+      "edep_max",
+      "detector_gamma_sum",
+      "primary_gamma_sum",
+      "nonzero_edep_rate",
+      "detector_gamma_rate",
+      "primary_transmission_rate",
+      "hit_count",
+      "hit_energy_mean",
+      "hit_energy_std",
+      "hit_energy_min",
+      "hit_energy_max",
+      "primary_hit_rate",
+      "direct_primary_count",
+      "scattered_primary_count",
+      "theta_mean",
+      "theta_std",
+      "y_mean",
+      "y_std",
+      "z_mean",
+      "z_std",
+      "r_mean",
+      "r_std",
+      "e_lt40_count",
+      "e_40_80_count",
+      "e_ge80_count",
+      "hit_count_rate",
+      "direct_primary_count_rate",
+      "scattered_primary_count_rate",
+      "e_lt40_count_rate",
+      "e_40_80_count_rate",
+      "e_ge80_count_rate",
+      "scatter_direct_ratio"
+    ],
+    "numeric_qc": {
+      "nan_replaced": 1250,
+      "inf_replaced": 0
+    },
+    "excluded_from_model": [
+      "material",
+      "formula",
+      "density_g_cm3",
+      "category",
+      "random_seed",
+      "run_id"
+    ]
+  },
+  "review_gate": {
+    "top1_probability_threshold": 0.65,
+    "top1_top2_margin_threshold": 0.15,
+    "distance_quantile": 0.95,
+    "distance_multiplier": 1.25
+  },
+  "main_method": "calibrated_extra_trees",
+  "acceptance_status": {
+    "main_method": "calibrated_extra_trees",
+    "main_metrics": {
+      "method": "calibrated_extra_trees",
+      "train_samples": 250,
+      "test_samples": 250,
+      "feature_count": 35,
+      "top1_accuracy": 0.464,
+      "top3_accuracy": 0.876,
+      "macro_f1": 0.44855104674417773,
+      "min_class_recall": 0.08
+    },
+    "auto_sort_precision": 0.8947368421052632,
+    "review_rate": 0.848,
+    "mean_open_set_review_recall": 0.808,
+    "criteria": {
+      "closed_set_top1_accuracy_ge_0_85": false,
+      "closed_set_macro_f1_ge_0_80": false,
+      "closed_set_min_recall_ge_0_70": false,
+      "closed_set_top3_accuracy_ge_0_95": false,
+      "auto_sort_precision_ge_0_90": false,
+      "review_rate_le_0_30": false,
+      "open_set_review_recall_ge_0_90": false
+    },
+    "all_criteria_met": false
+  },
+  "software": {
+    "python": "3.12.13",
+    "pandas": "3.0.1"
+  },
+  "claim_boundary": [
+    "This is a diagnostic material-level sorting attempt for the configured ten materials.",
+    "The current result does not pass the predefined material-level acceptance criteria.",
+    "The review gate is an experimental safeguard against forced classification of low-confidence or unknown-like samples.",
+    "It does not prove all-mineral identification, real-device performance, mixed ore sorting, or industrial deployment."
+  ]
+}

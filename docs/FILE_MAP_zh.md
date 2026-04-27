@@ -43,6 +43,8 @@ Geant4 运行后会在 `build/` 下生成 `*_events.csv`、`*_hits.csv` 和 meta
 
 `analysis/classify_absorption_groups.py` 是公开验证的核心分析脚本。它完成材料目录读取、事件 CSV 检查、事件聚合、样本级特征计算、训练/测试拆分、阈值法、Logistic Regression、accuracy、confusion matrix 和 manifest 输出。
 
+`analysis/generate_material_sorting_matrix.py`、`analysis/run_material_sorting_matrix.py` 和 `analysis/material_sorting.py` 是材料级分选诊断线。它们用于生成 270-run pilot/full 矩阵、分批运行 Geant4，并评价十材料标签预测、top-3 候选、复核门控和开放集表现。当前结果是未通过验收的诊断证据，不是材料级成功结论。
+
 脚本当前使用的主要特征是：
 
 | 特征 | 来源 | 含义 |
@@ -69,6 +71,8 @@ Geant4 运行后会在 `build/` 下生成 `*_events.csv`、`*_hits.csv` 和 meta
 
 如果论文或 README 中的数字和这些文件不一致，以 `results/undergrad_validation/` 为准。
 
+`results/material_sorting/` 是材料级诊断证据包。当前主方法 top-1 accuracy 为 `0.464`，top-3 accuracy 为 `0.876`，所有材料级验收条件均未通过；因此它用于说明下一阶段问题，而不是替代 `results/undergrad_validation/` 的二分类主结论。
+
 ## 6. 文档表达层
 
 `README.md` 是仓库入口，负责用最短路径说明项目是什么、如何读、结果是什么、边界是什么。
@@ -78,6 +82,7 @@ Geant4 运行后会在 `build/` 下生成 `*_events.csv`、`*_hits.csv` 和 meta
 `docs/RUN_LOCALLY_zh.md` 写给要复现的人，重点说明环境、构建、十材料运行、Python 分析和结果检查。
 
 `docs/GLOSSARY_BY_FIRST_APPEARANCE.md` 解释术语，避免组员因为 Geant4、XRT、event、primary gamma、Logistic Regression 等词卡住。
+`docs/MATERIAL_LEVEL_SORTING_DIAGNOSTIC_zh.md` 记录十材料物种级诊断为什么未通过，以及后续应如何继续。
 
 `docs/public_explainer_zh.md` 是最短的通俗讲解，适合发给只想快速知道项目做了什么的人。
 

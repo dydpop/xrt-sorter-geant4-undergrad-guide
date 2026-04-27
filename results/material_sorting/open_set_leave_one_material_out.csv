@@ -1,0 +1,11 @@
+held_out_material,test_samples,review_or_unknown_samples,open_set_review_recall,forced_auto_sort_samples
+Quartz,50,30,0.6,20
+Calcite,50,34,0.68,16
+Orthoclase,50,49,0.98,1
+Albite,50,25,0.5,25
+Dolomite,50,41,0.82,9
+Pyrite,50,48,0.96,2
+Hematite,50,41,0.82,9
+Magnetite,50,43,0.86,7
+Chalcopyrite,50,43,0.86,7
+Galena,50,50,1.0,0

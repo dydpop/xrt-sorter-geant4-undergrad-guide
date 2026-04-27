@@ -10,4 +10,6 @@
 
 这个结果不能被理解成真实设备准确率，也不能说明所有矿物都能被同样准确地区分。原因很简单：当前数据来自仿真，不是真实 XRT 设备；样本是单一材料 slab，不是真实复杂矿石；训练集和测试集来自同一类仿真配置，不是跨设备、跨厚度、跨矿区或跨随机种子的外部验证。因此，最严谨的说法是：本项目完成了本科级 XRT 仿真与分析闭环，并在当前十材料仿真证据包上验证了粗粒度吸收组分类能力。
 
+我们还额外做了十材料物种级诊断。结果显示，直接预测十个材料名时主方法 top-1 accuracy 只有 `0.464`，没有达到验收标准。这说明项目目前不能宣称“已经能识别十种矿物”，只能把材料级分选作为下一阶段实验方向。
+
 如果只想快速理解项目，先看 `README.md` 和 `docs/TEAM_GUIDE_zh.md`。如果想复查数字从哪里来，看 `results/undergrad_validation/validation_manifest.json`、`train_test_split_samples.csv` 和 `absorption_group_classification_summary.csv`。如果想自己运行，看 `docs/RUN_LOCALLY_zh.md`。如果要写论文或答辩，看 `paper/main_thesis_HIT_revised_zh.md`。

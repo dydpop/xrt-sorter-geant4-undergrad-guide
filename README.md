@@ -1,4 +1,4 @@
-# Geant4 XRT 矿物分选仿真本科项目
+# Geant4 XRT 矿物分选仿真本科项目：吸收组基线与材料级诊断
 
 这是一个面向本科项目展示、答辩准备和组内学习的 **X 射线透射（XRT）矿物分选仿真系统**。项目用 Geant4 搭建 X 射线源、矿物样本和探测器，用 C++ 输出事件数据，再用 Python 完成数据质量检查、样本聚合、特征提取、训练/测试拆分和基础分类验证。
 
@@ -28,6 +28,7 @@
 | 想知道每个文件干什么 | `docs/FILE_MAP_zh.md` |
 | 看不懂专业词 | `docs/GLOSSARY_BY_FIRST_APPEARANCE.md` |
 | 想核对结果数字 | `results/undergrad_validation/validation_manifest.json` |
+| 想看十材料物种级分选是否成立 | `docs/MATERIAL_LEVEL_SORTING_DIAGNOSTIC_zh.md` |
 | 想看最终边界复核 | `docs/FINAL_ELEMENTARY_REVIEW_zh.md` |
 
 ## 数据链路
@@ -57,6 +58,12 @@ flowchart LR
 ![基础分类精度](figures/elementary_absorption_accuracy.png)
 
 这里的 `0.9960` 表示三特征 Logistic Regression 在 250 个测试虚拟样本中正确 249 个。它不是训练集准确率，也不是所有矿物、真实设备或工业场景的普适准确率。
+
+## 材料级分选诊断
+
+为了回应“十种材料是否已经能被逐一识别”的问题，仓库新增了材料级分选诊断脚本和结果。当前诊断结论是负面的：在旧的 10 mm、120 kV spectrum 公开数据上，十材料直接分类的主方法 `Calibrated Extra Trees` 只有 `0.464` top-1 accuracy、`0.876` top-3 accuracy、`0.4486` macro-F1，复核率为 `0.848`，所有预设验收条件均未通过。
+
+这说明当前 `0.9960` 只能作为低/高吸收组二分类结果引用，不能改写成十材料物种识别准确率。材料级实验骨架已经具备：`random_seed` 配置、pilot/full 矩阵、批量运行脚本、top-3 候选、置信度复核和开放集检查；但完整 270-run pilot/full 矩阵尚未完成，因此材料级分选目前只能作为下一阶段方向。详见 `docs/MATERIAL_LEVEL_SORTING_DIAGNOSTIC_zh.md`。
 
 ## 快速运行
 

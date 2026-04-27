@@ -1,0 +1,4 @@
+row_index,profile,material,source_id,thickness_mm,random_seed,returncode,elapsed_seconds,config_path,output_prefix
+0,pilot,Quartz,mono_60kev,5.0,101,0,9.062,source_models/config/material_sorting_matrix/pilot/ms_pilot_quartz_mono_60kev_5mm_seed101.txt,ms_pilot_quartz_mono_60kev_5mm_seed101
+1,pilot,Quartz,mono_60kev,5.0,202,0,3.814,source_models/config/material_sorting_matrix/pilot/ms_pilot_quartz_mono_60kev_5mm_seed202.txt,ms_pilot_quartz_mono_60kev_5mm_seed202
+2,pilot,Quartz,mono_60kev,5.0,303,0,3.155,source_models/config/material_sorting_matrix/pilot/ms_pilot_quartz_mono_60kev_5mm_seed303.txt,ms_pilot_quartz_mono_60kev_5mm_seed303

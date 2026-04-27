@@ -91,6 +91,14 @@ int GetInt(const std::unordered_map<std::string, std::string>& values,
   return it == values.end() ? fallback : std::stoi(it->second);
 }
 
+long GetLong(const std::unordered_map<std::string, std::string>& values,
+             const std::string& key,
+             long fallback)
+{
+  const auto it = values.find(key);
+  return it == values.end() ? fallback : std::stol(it->second);
+}
+
 std::filesystem::path ResolvePath(const std::filesystem::path& configPath,
                                   const std::string& candidate)
 {
@@ -221,6 +229,7 @@ ExperimentConfig LoadConfig()
   config.feedCondition =
       GetString(values, "feed_condition", config.feedCondition);
   config.samplePhotons = GetInt(values, "sample_photons", config.samplePhotons);
+  config.randomSeed = GetLong(values, "random_seed", config.randomSeed);
 
   config.sourceMode =
       ParseSourceMode(GetString(values, "source_mode", "spectrum"));

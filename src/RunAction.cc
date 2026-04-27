@@ -179,6 +179,7 @@ void RunAction::WriteMetadataFile(G4int nofEvents,
   outFile << "  \"detector_half_z_mm\": " << config.detectorHalfZ_mm << ",\n";
   outFile << "  \"detector_x_cm\": " << config.detectorX_cm << ",\n";
   outFile << "  \"sample_photons\": " << config.samplePhotons << ",\n";
+  outFile << "  \"random_seed\": " << config.randomSeed << ",\n";
   outFile << "  \"event_file\": \"" << fEventCsvFileName << "\",\n";
   outFile << "  \"hit_file\": \"" << fHitCsvFileName << "\",\n";
   outFile << "  \"n_events\": " << nofEvents << ",\n";

@@ -1,0 +1,11 @@
+,Quartz,Calcite,Orthoclase,Albite,Dolomite,Pyrite,Hematite,Magnetite,Chalcopyrite,Galena
+Quartz,5,1,8,10,1,0,0,0,0,0
+Calcite,0,20,3,0,2,0,0,0,0,0
+Orthoclase,2,2,12,1,8,0,0,0,0,0
+Albite,7,1,10,7,0,0,0,0,0,0
+Dolomite,0,8,5,1,11,0,0,0,0,0
+Pyrite,0,0,0,0,0,14,1,2,7,1
+Hematite,0,0,0,0,0,10,2,3,6,4
+Magnetite,0,0,0,0,0,8,3,3,7,4
+Chalcopyrite,0,0,0,0,0,10,4,3,6,2
+Galena,0,0,0,0,0,0,0,0,0,25

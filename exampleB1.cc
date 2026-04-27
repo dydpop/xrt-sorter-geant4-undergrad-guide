@@ -1,5 +1,6 @@
 #include "ActionInitialization.hh"
 #include "DetectorConstruction.hh"
+#include "ExperimentConfig.hh"
 
 #include "G4EmLivermorePhysics.hh"
 #include "G4RunManagerFactory.hh"
@@ -7,9 +8,15 @@
 #include "G4UIExecutive.hh"
 #include "G4VisExecutive.hh"
 #include "QBBC.hh"
+#include "Randomize.hh"
 
 int main(int argc, char** argv)
 {
+  const auto& config = GetExperimentConfig();
+  if (config.randomSeed >= 0) {
+    CLHEP::HepRandom::setTheSeed(config.randomSeed);
+  }
+
   G4UIExecutive* ui = nullptr;
   if (argc == 1) {
     ui = new G4UIExecutive(argc, argv);

@@ -1,0 +1,5 @@
+method,train_samples,test_samples,feature_count,top1_accuracy,top3_accuracy,macro_f1,min_class_recall
+logistic_regression,250,250,35,0.448,0.872,0.4429225436031679,0.16
+random_forest,250,250,35,0.42,0.852,0.38792130254005214,0.08
+svm_rbf,250,250,35,0.42,0.868,0.40625214348384386,0.12
+calibrated_extra_trees,250,250,35,0.464,0.876,0.44855104674417773,0.08

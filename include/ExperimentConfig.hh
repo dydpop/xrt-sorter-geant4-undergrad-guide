@@ -42,6 +42,7 @@ struct ExperimentConfig
   std::string feedSizeBand = "standard_block";
   std::string feedCondition = "clean_dry_single_piece";
   int samplePhotons = 100;
+  long randomSeed = -1;
 
   SourceMode sourceMode = SourceMode::Spectrum;
   std::string spectrumFile;
