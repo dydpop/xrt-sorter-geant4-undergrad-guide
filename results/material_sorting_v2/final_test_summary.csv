@@ -1,0 +1,2 @@
+method,samples,top1_accuracy,top3_accuracy,macro_f1,min_class_recall
+LogisticRegression,3000,0.38133333333333336,0.8116666666666666,0.31525152565340997,0.0

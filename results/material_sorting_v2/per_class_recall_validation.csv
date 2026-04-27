@@ -1,0 +1,11 @@
+split,material,support,recall
+validation,Quartz,300,0.23
+validation,Calcite,300,0.8
+validation,Orthoclase,300,0.52
+validation,Albite,300,0.5266666666666666
+validation,Dolomite,300,0.49666666666666665
+validation,Pyrite,300,0.5933333333333334
+validation,Hematite,300,0.3433333333333333
+validation,Magnetite,300,0.25
+validation,Chalcopyrite,300,0.4266666666666667
+validation,Galena,300,1.0

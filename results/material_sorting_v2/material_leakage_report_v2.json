@@ -1,0 +1,17 @@
+{
+  "feature_exact_blocklist_violations": [],
+  "feature_fragment_blocklist_violations": [],
+  "train_seeds": [
+    101
+  ],
+  "validation_seeds": [
+    202
+  ],
+  "test_seeds": [
+    303
+  ],
+  "test_seed_in_train": false,
+  "calibration_rows_enter_supervised_table": false,
+  "complete_full_matrix": true,
+  "passes_leakage_checks": true
+}

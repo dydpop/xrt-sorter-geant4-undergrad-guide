@@ -1,0 +1,144 @@
+{
+  "package": "xrt-sorter-geant4-undergrad-guide",
+  "generated_by": "analysis/material_sorting_v2.py",
+  "generated_at_utc": "2026-04-27T13:24:49+00:00",
+  "raw_dir": "build/material_sorting_runs/full",
+  "protocol": {
+    "name": "material_sorting_v2_seed_holdout",
+    "train_seed": 101,
+    "validation_seed": 202,
+    "test_seed": 303,
+    "photons_per_sample": 100,
+    "energy_edges_keV": [
+      0.0,
+      40.0,
+      50.0,
+      60.0,
+      70.0,
+      80.0,
+      90.0,
+      100.0,
+      110.0,
+      120.0,
+      "inf"
+    ],
+    "acceptance_targets": {
+      "top1_accuracy_ge_0_85": 0.85,
+      "macro_f1_ge_0_80": 0.8,
+      "min_class_recall_ge_0_70": 0.7
+    }
+  },
+  "matrix_status": {
+    "material_metadata_found": 270,
+    "calibration_metadata_found": 9,
+    "materials_found": [
+      "Albite",
+      "Calcite",
+      "Chalcopyrite",
+      "Dolomite",
+      "Galena",
+      "Hematite",
+      "Magnetite",
+      "Orthoclase",
+      "Pyrite",
+      "Quartz"
+    ],
+    "sources_found": [
+      "mono_100kev",
+      "mono_60kev",
+      "spectrum_120kv"
+    ],
+    "thicknesses_found": [
+      5.0,
+      10.0,
+      20.0
+    ],
+    "seeds_found": [
+      101,
+      202,
+      303
+    ],
+    "missing_material_runs": 0,
+    "missing_calibration_runs": 0,
+    "complete_target_material_set": true,
+    "complete_full_matrix": true
+  },
+  "software": {
+    "python": "3.12.13",
+    "pandas": "3.0.1"
+  },
+  "run_status": "completed_evaluation",
+  "table_mode": "multi_source_fused",
+  "sample_rows": 9000,
+  "split_rows": {
+    "train": 3000,
+    "validation": 3000,
+    "test": 3000
+  },
+  "final_train_rows": 6000,
+  "base_feature_count": 183,
+  "model_feature_count": 193,
+  "selected_by_validation": "LogisticRegression",
+  "feature_family_count": 9,
+  "feature_family_order": [
+    "raw_counts",
+    "calibrated_transmission",
+    "attenuation",
+    "thickness_normalized_attenuation",
+    "spectral_shape",
+    "scatter_direct",
+    "source_fusion",
+    "dictionary_distance",
+    "other_numeric"
+  ],
+  "acceptance_status": {
+    "selected_method": "LogisticRegression",
+    "final_test_metrics": {
+      "method": "LogisticRegression",
+      "samples": 3000,
+      "top1_accuracy": 0.38133333333333336,
+      "top3_accuracy": 0.8116666666666666,
+      "macro_f1": 0.31525152565340997,
+      "min_class_recall": 0.0
+    },
+    "auto_sort_precision": 0.5646661031276415,
+    "review_rate": 0.6056666666666667,
+    "review_thresholds_selected_on_validation": {
+      "probability_threshold": 0.75,
+      "margin_threshold": 0.0,
+      "auto_sort_precision": 0.9049235993208828,
+      "review_rate": 0.8036666666666666,
+      "auto_sort_coverage": 0.19633333333333333
+    },
+    "dictionary_retrieval": {
+      "validation": {
+        "split": "validation",
+        "samples": 3000,
+        "dict_top1_accuracy": 0.32666666666666666,
+        "dict_top3_accuracy": 0.757,
+        "mean_dict_distance_margin": 1.0030762824050707
+      },
+      "final_test": {
+        "split": "test",
+        "samples": 3000,
+        "dict_top1_accuracy": 0.33,
+        "dict_top3_accuracy": 0.763,
+        "mean_dict_distance_margin": 0.3556968702433431
+      }
+    },
+    "criteria": {
+      "top1_accuracy_ge_0_85": false,
+      "macro_f1_ge_0_80": false,
+      "min_class_recall_ge_0_70": false
+    },
+    "all_criteria_met": false
+  },
+  "stage_conclusion": "diagnostic_only_not_ready",
+  "claim_boundary": [
+    "The final test seed is never used for model selection or dictionary fitting before final evaluation.",
+    "Review thresholds are selected on the validation seed before final test decisions are written.",
+    "If acceptance criteria fail, this package must not claim complete ten-material automatic sorting.",
+    "Dictionary distance features are fitted only from training or training+validation rows.",
+    "Catalog fields such as formula, density, category, and group label are written for explanation only and are blocklisted from model features."
+  ]
+}

@@ -1,0 +1,11 @@
+material,formula,density_g_cm3,category,group_label,n_samples,feature_count,thickness_group_count,thickness_mean_profile_std,source_group_count,source_mean_profile_std,validation_dictionary_top1_accuracy,validation_dictionary_top3_accuracy,validation_confused_as
+Albite,NaAlSi3O8,2.62,feldspar,low_absorption,600,183,3,5.4703224836650675,3,6.23049699241395,0.51,0.6866666666666666,Quartz;Orthoclase;Dolomite
+Calcite,CaCO3,2.71,carbonate,low_absorption,600,183,3,5.217058455843307,3,5.941906595713392,0.4166666666666667,0.5933333333333334,Dolomite;Orthoclase
+Chalcopyrite,CuFeS2,4.2,sulfide,high_absorption,600,183,3,3.816384120280419,3,4.654446809324609,0.17,0.9133333333333333,Pyrite;Magnetite;Hematite
+Dolomite,CaMg(CO3)2,2.85,carbonate,low_absorption,600,183,3,5.383760042573572,3,6.124966909379443,0.12666666666666668,0.6133333333333333,Orthoclase;Calcite;Quartz;Albite;Chalcopyrite
+Galena,PbS,7.5,sulfide,high_absorption,600,183,3,0.06458642296082708,3,0.11296269236681955,1.0,1.0,
+Hematite,Fe2O3,5.26,iron_oxide,high_absorption,600,183,3,3.7291002286200787,3,4.557640302557181,0.06666666666666667,0.91,Chalcopyrite;Magnetite;Pyrite;Galena
+Magnetite,Fe3O4,5.17,iron_oxide,high_absorption,600,183,3,3.664902557276331,3,4.5081075026945445,0.4266666666666667,0.6733333333333333,Hematite;Chalcopyrite;Pyrite;Galena
+Orthoclase,KAlSi3O8,2.56,feldspar,low_absorption,600,183,3,5.377347040552425,3,6.095735156055769,0.17333333333333334,0.9066666666666666,Dolomite;Albite;Calcite;Quartz;Chalcopyrite
+Pyrite,FeS2,5.0,sulfide,high_absorption,600,183,3,4.1246241424227925,3,4.872172779217669,0.4,0.61,Chalcopyrite;Hematite;Magnetite;Calcite
+Quartz,SiO2,2.65,silicate,low_absorption,600,183,3,5.541698253488234,3,6.248553314340119,0.08,0.6966666666666667,Albite;Orthoclase;Dolomite;Chalcopyrite;Calcite

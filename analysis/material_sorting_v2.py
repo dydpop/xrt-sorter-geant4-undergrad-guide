@@ -737,7 +737,13 @@ def build_sklearn_models(sk) -> dict[str, object]:
         "HistGradientBoosting": sk["HistGradientBoostingClassifier"](random_state=42),
         "MLPClassifier": sk["make_pipeline"](
             sk["StandardScaler"](),
-            sk["MLPClassifier"](hidden_layer_sizes=(96, 48), max_iter=800, random_state=42, early_stopping=True),
+            sk["MLPClassifier"](
+                hidden_layer_sizes=(64,),
+                max_iter=250,
+                tol=1e-3,
+                random_state=42,
+                early_stopping=False,
+            ),
         ),
     }
 
@@ -878,7 +884,8 @@ def json_safe(value):
 
 
 def write_manifest(path: Path, manifest: dict) -> None:
-    path.write_text(json.dumps(json_safe(manifest), ensure_ascii=False, indent=2, allow_nan=False) + "\n", encoding="utf-8")
+    content = json.dumps(json_safe(manifest), ensure_ascii=False, indent=2, allow_nan=False) + "\n"
+    path.write_bytes(content.encode("utf-8"))
 
 
 def json_energy_edges() -> list[float | str]:
@@ -1203,12 +1210,31 @@ def main() -> None:
     ]
     validation_rows = []
     for method in methods:
-        _, predictions, scores, classes = train_and_score(method, dev_train, dev_validation, dev_feature_cols, sk)
-        validation_rows.append(evaluate_scores(method, dev_validation, predictions, scores, classes, sk))
+        try:
+            _, predictions, scores, classes = train_and_score(method, dev_train, dev_validation, dev_feature_cols, sk)
+            validation_rows.append(evaluate_scores(method, dev_validation, predictions, scores, classes, sk))
+        except Exception as exc:  # noqa: BLE001 - optional candidates should not abort final evaluation.
+            validation_rows.append(
+                {
+                    "method": method,
+                    "samples": int(len(dev_validation)),
+                    "top1_accuracy": math.nan,
+                    "top3_accuracy": math.nan,
+                    "macro_f1": math.nan,
+                    "min_class_recall": math.nan,
+                    "error": str(exc),
+                }
+            )
     validation_summary = pd.DataFrame(validation_rows).sort_values(
         ["macro_f1", "top1_accuracy", "min_class_recall"], ascending=[False, False, False]
     )
-    selected_method = str(validation_summary.iloc[0]["method"])
+    selectable = validation_summary.dropna(subset=["macro_f1", "top1_accuracy", "min_class_recall"])
+    if selectable.empty:
+        manifest_base["run_status"] = "model_selection_failed"
+        manifest_base["model_selection_errors"] = validation_summary.to_dict(orient="records")
+        write_manifest(output_dir / "material_sorting_v2_manifest.json", manifest_base)
+        raise SystemExit("All validation candidate models failed; wrote manifest.")
+    selected_method = str(selectable.iloc[0]["method"])
     write_csv(validation_summary, output_dir / "model_selection_validation.csv")
     write_csv(validation_summary, output_dir / "material_model_summary_v2.csv")
     write_csv(feature_family_ablation(dev_train, dev_validation, dev_feature_cols, sk), output_dir / "feature_family_ablation.csv")

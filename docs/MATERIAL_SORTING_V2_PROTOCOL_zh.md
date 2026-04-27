@@ -102,4 +102,19 @@ v2 主要输出：
 
 ## 7. 当前状态
 
-本仓库已经实现 v2 协议代码、矩阵配置、smoke 验证、validation-only 阈值选择、feature-family ablation、候选检索表和内生增强字典输出。当前还没有完成 270 个 full material run 和 9 个 full calibration run，因此没有新的十材料最终准确率。旧的材料级结果仍是 v1 诊断：Top-1 `0.464`、Top-3 `0.876`。
+本仓库已经完成 full matrix：`270` 个 material run 和 `9` 个 calibration run 全部 returncode `0`。正式 v2 评估结果已经写入 `results/material_sorting_v2/`。
+
+当前结论是负结果诊断，不是十材料自动分选成功：
+
+| 项 | 数值 |
+| --- | ---: |
+| validation 选中模型 | `LogisticRegression` |
+| validation Top-1 / Top-3 | `0.5187` / `0.9233` |
+| final test Top-1 / Top-3 | `0.3813` / `0.8117` |
+| final test macro-F1 | `0.3153` |
+| final test 最低单类召回 | `0.0000` |
+| final stage conclusion | `diagnostic_only_not_ready` |
+
+validation 上选出的 review 阈值为 probability `0.75`、margin `0.0`，validation auto-sort precision `0.9049`，但 final test auto-sort precision 只有 `0.5647`、review rate `0.6057`。这说明当前 v2 特征和模型在 seed holdout 下泛化不足，不能包装成成功结论。
+
+主要混淆来自低吸收硅酸盐/碳酸盐内部（如 Quartz-Albite-Orthoclase-Dolomite）和高吸收硫化物/氧化物内部（如 Hematite-Magnetite-Chalcopyrite-Pyrite）。旧的 `0.9960` 仍只能代表低/高吸收组二分类，不能外推到十材料分辨。
