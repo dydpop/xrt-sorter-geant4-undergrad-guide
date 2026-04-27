@@ -59,15 +59,17 @@ python analysis/material_sorting_v2.py \
   --allow-incomplete
 ```
 
-## 5. 物化指纹
+## 5. 物化指纹和模型族
 
 v2 固定能量 bin：
 
 `[0,40,50,60,70,80,90,100,110,120,inf] keV`
 
-主要特征包括 `I_bin`、`T_bin=(I+0.5)/(I0+0.5)`、`A_bin=-log(T_bin)`、`A_bin/thickness`、低/高能透射 ratio、谱质心、谱标准差、稳定 direct/scatter 比值、字典最近距离、Top-k 距离和 margin。
+主要特征按 family 标注：raw counts、calibrated transmission、attenuation、thickness-normalized attenuation、spectral shape、scatter/direct、source-fusion、dictionary-distance。具体包括 `I_bin`、`T_bin=(I+0.5)/(I0+0.5)`、`A_bin=-log(T_bin)`、`A_bin/thickness`、低/高能透射 ratio、谱质心、谱标准差、稳定 direct/scatter 比值、字典最近距离、Top-k 距离和 margin。
 
 原来的不稳定比值 `scattered/(direct+1e-6)` 不再作为 v2 特征使用。
+
+模型选择只使用 `seed=202` validation。候选包括 `PhysicsOnly`、`DictionaryOnly`、`PhysicsPlusDictionary`、centroid baseline、Logistic/SVM/RandomForest/ExtraTrees/HistGB/MLP。最终 `seed=303` test 只在 validation 选定模型和 review 阈值后评估。
 
 ## 6. 防泄漏
 
@@ -77,15 +79,27 @@ v2 主要输出：
 
 - `material_raw_inventory_v2.csv`
 - `material_feature_columns_v2.csv`
+- `material_feature_families_v2.csv`
 - `material_excluded_columns_v2.csv`
 - `material_seed_split_assignments_v2.csv`
 - `material_leakage_report_v2.json`
+- `model_selection_validation.csv`
+- `feature_family_ablation.csv`
+- `threshold_selection_validation.csv`
+- `validation_decisions.csv`
+- `candidate_retrieval_validation.csv`
+- `material_confusion_graph.csv`
+- `per_class_recall_validation.csv`
 - `material_dictionary.json`
 - `material_dictionary.csv`
+- `material_dictionary_enriched.json`
+- `material_dictionary_enriched.csv`
 - `final_test_summary.csv`
 - `final_test_decisions.csv`
+- `candidate_retrieval_final_test.csv`
+- `per_class_recall_final_test.csv`
 - `material_sorting_v2_manifest.json`
 
 ## 7. 当前状态
 
-本仓库已经实现 v2 协议代码、矩阵配置和 smoke 验证。当前还没有完成 270 个 full material run 和 9 个 full calibration run，因此没有新的十材料最终准确率。旧的材料级结果仍是 v1 诊断：Top-1 `0.464`、Top-3 `0.876`。
+本仓库已经实现 v2 协议代码、矩阵配置、smoke 验证、validation-only 阈值选择、feature-family ablation、候选检索表和内生增强字典输出。当前还没有完成 270 个 full material run 和 9 个 full calibration run，因此没有新的十材料最终准确率。旧的材料级结果仍是 v1 诊断：Top-1 `0.464`、Top-3 `0.876`。

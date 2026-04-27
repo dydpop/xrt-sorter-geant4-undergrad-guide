@@ -13,6 +13,7 @@ import pandas as pd
 
 
 PHOTONS_PER_SAMPLE = 100
+MATERIALS_FILE = Path("source_models/materials/material_catalog.csv")
 TRAIN_SEED = 101
 VALIDATION_SEED = 202
 TEST_SEED = 303
@@ -35,6 +36,19 @@ ENERGY_EDGES = [0.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0, 110.0, 120.0, ma
 REVIEW_PROBABILITY_THRESHOLD = 0.65
 REVIEW_MARGIN_THRESHOLD = 0.15
 EPS = 0.5
+THRESHOLD_PROBABILITY_GRID = [0.0, 0.50, 0.60, 0.65, 0.70, 0.75, 0.80, 0.85]
+THRESHOLD_MARGIN_QUANTILES = [0.0, 0.10, 0.20, 0.30, 0.40]
+FEATURE_FAMILY_ORDER = [
+    "raw_counts",
+    "calibrated_transmission",
+    "attenuation",
+    "thickness_normalized_attenuation",
+    "spectral_shape",
+    "scatter_direct",
+    "source_fusion",
+    "dictionary_distance",
+    "other_numeric",
+]
 HARD_EXCLUDED_COLUMNS = {
     "material",
     "true_material",
@@ -390,6 +404,66 @@ def numeric_feature_columns(frame: pd.DataFrame) -> list[str]:
     return cols
 
 
+def feature_family(col: str) -> str:
+    base = col.split("__", 1)[1] if "__" in col else col
+    if col.startswith("dict_"):
+        return "dictionary_distance"
+    if col.startswith("dual_source_"):
+        return "source_fusion"
+    if "direct_primary" in base or "scattered_primary" in base or "scatter" in base:
+        return "scatter_direct"
+    if base.startswith("T_") or base.startswith("primary_transmission") or base.startswith("detector_gamma_rate"):
+        return "calibrated_transmission"
+    if base.startswith("A_per_mm_"):
+        return "thickness_normalized_attenuation"
+    if base.startswith("A_") or "dual_log_ratio" in base:
+        return "attenuation"
+    if base.startswith("I_") or base.endswith("_count") or base.endswith("_sum"):
+        return "raw_counts"
+    if "spectrum_" in base or "hit_energy" in base or base.startswith("theta_") or base.startswith("r_"):
+        return "spectral_shape"
+    return "other_numeric"
+
+
+def feature_family_table(feature_cols: list[str]) -> pd.DataFrame:
+    return pd.DataFrame(
+        [{"feature": col, "family": feature_family(col)} for col in feature_cols]
+    )
+
+
+def columns_for_families(feature_cols: list[str], families: set[str]) -> list[str]:
+    return [col for col in feature_cols if feature_family(col) in families]
+
+
+def physics_feature_columns(feature_cols: list[str]) -> list[str]:
+    families = {
+        "calibrated_transmission",
+        "attenuation",
+        "thickness_normalized_attenuation",
+        "spectral_shape",
+        "scatter_direct",
+        "source_fusion",
+    }
+    cols = columns_for_families(feature_cols, families)
+    return cols or feature_cols
+
+
+def dictionary_feature_columns(feature_cols: list[str]) -> list[str]:
+    cols = columns_for_families(feature_cols, {"dictionary_distance"})
+    return cols or feature_cols
+
+
+def legacy_physics_dictionary_columns(feature_cols: list[str]) -> list[str]:
+    families = {
+        "calibrated_transmission",
+        "attenuation",
+        "thickness_normalized_attenuation",
+        "source_fusion",
+    }
+    cols = columns_for_families(feature_cols, families)
+    return cols or physics_feature_columns(feature_cols)
+
+
 def fuse_sources(samples: pd.DataFrame) -> tuple[pd.DataFrame, str]:
     if samples["source_id"].nunique() < 2:
         return samples.copy(), "single_source"
@@ -507,6 +581,149 @@ def append_dictionary_features(frame: pd.DataFrame, dictionary: dict) -> pd.Data
     return pd.concat([frame.reset_index(drop=True), numeric_dist.reset_index(drop=True)], axis=1)
 
 
+def load_material_catalog(project_root: Path) -> pd.DataFrame:
+    cols = ["material_name", "formula", "density_g_cm3", "category", "group_label", "notes"]
+    catalog = pd.read_csv(project_root / MATERIALS_FILE)
+    catalog = catalog[catalog["material_name"].isin(TARGET_MATERIALS)].copy()
+    for col in cols:
+        if col not in catalog.columns:
+            catalog[col] = ""
+    return catalog[cols].rename(columns={"material_name": "material"})
+
+
+def candidate_retrieval_frame(frame: pd.DataFrame, dictionary: dict, split: str) -> pd.DataFrame:
+    dist = dictionary_distances(frame, dictionary)
+    rows = frame[["material", "thickness_mm", "random_seed"]].reset_index(drop=True).copy()
+    if "sample_id" in frame.columns:
+        rows["sample_id"] = frame["sample_id"].reset_index(drop=True)
+    rows["split"] = split
+    rows["dict_top1_material"] = dist["dict_top1_material"].reset_index(drop=True)
+    rows["dict_top3_candidates"] = dist["dict_top3_candidates"].reset_index(drop=True)
+    rows["dict_top1_distance"] = dist["dict_top1_distance"].reset_index(drop=True)
+    rows["dict_top2_distance"] = dist["dict_top2_distance"].reset_index(drop=True)
+    rows["dict_distance_margin"] = dist["dict_distance_margin"].reset_index(drop=True)
+    rows["dict_top1_correct"] = rows["material"].astype(str).eq(rows["dict_top1_material"].astype(str))
+    rows["dict_top3_contains_true"] = [
+        str(material) in str(candidates).split(";")
+        for material, candidates in zip(rows["material"], rows["dict_top3_candidates"])
+    ]
+    return rows
+
+
+def retrieval_summary(retrieval: pd.DataFrame, split: str) -> dict:
+    if retrieval.empty:
+        return {
+            "split": split,
+            "samples": 0,
+            "dict_top1_accuracy": math.nan,
+            "dict_top3_accuracy": math.nan,
+            "mean_dict_distance_margin": math.nan,
+        }
+    return {
+        "split": split,
+        "samples": int(len(retrieval)),
+        "dict_top1_accuracy": float(retrieval["dict_top1_correct"].mean()),
+        "dict_top3_accuracy": float(retrieval["dict_top3_contains_true"].mean()),
+        "mean_dict_distance_margin": float(retrieval["dict_distance_margin"].mean()),
+    }
+
+
+def feature_summary_for_material(frame: pd.DataFrame, material: str, feature_cols: list[str]) -> dict:
+    part = frame[frame["material"] == material]
+    summary = {}
+    for family in FEATURE_FAMILY_ORDER:
+        cols = columns_for_families(feature_cols, {family})
+        if not cols:
+            continue
+        values = part[cols].to_numpy(dtype=float)
+        summary[family] = {
+            "feature_count": len(cols),
+            "mean": float(np.mean(values)) if values.size else math.nan,
+            "std": float(np.std(values)) if values.size else math.nan,
+        }
+    return summary
+
+
+def stability_index(frame: pd.DataFrame, material: str, group_col: str, feature_cols: list[str]) -> dict:
+    part = frame[frame["material"] == material]
+    if group_col not in part.columns or part[group_col].nunique() < 2 or not feature_cols:
+        return {"group_count": int(part[group_col].nunique()) if group_col in part.columns else 0, "mean_profile_std": math.nan}
+    grouped = part.groupby(group_col)[feature_cols].mean()
+    return {
+        "group_count": int(grouped.shape[0]),
+        "mean_profile_std": float(grouped.std(axis=0).mean()),
+    }
+
+
+def enriched_dictionary(
+    dictionary: dict,
+    catalog: pd.DataFrame,
+    model_frame: pd.DataFrame,
+    long_frame: pd.DataFrame,
+    validation_retrieval: pd.DataFrame,
+    confusion_graph: pd.DataFrame,
+) -> tuple[dict, pd.DataFrame]:
+    catalog_rows = {row["material"]: row for row in catalog.to_dict(orient="records")}
+    feature_cols = dictionary["feature_columns"]
+    entries = []
+    table_rows = []
+    for material in dictionary["materials"]:
+        proto = dictionary["prototypes"][material]
+        catalog_row = catalog_rows.get(material, {})
+        retrieval_part = validation_retrieval[validation_retrieval["material"] == material]
+        confused_as = confusion_graph[confusion_graph["true_material"] == material]["predicted_material"].tolist()
+        model_part = model_frame[model_frame["material"] == material]
+        long_part = long_frame[long_frame["material"] == material]
+        thickness_stability = stability_index(model_frame, material, "thickness_mm", feature_cols)
+        source_cols = [col for col in feature_cols if "__" in col]
+        source_stability = {
+            "group_count": len({col.split("__", 1)[0] for col in source_cols}),
+            "mean_profile_std": float(model_part[source_cols].std(axis=0).mean()) if source_cols and not model_part.empty else math.nan,
+        }
+        entry = {
+            "material": material,
+            "catalog": {
+                "formula": catalog_row.get("formula", ""),
+                "density_g_cm3": catalog_row.get("density_g_cm3", ""),
+                "category": catalog_row.get("category", ""),
+                "group_label": catalog_row.get("group_label", ""),
+                "notes": catalog_row.get("notes", ""),
+            },
+            "prototype": proto,
+            "feature_family_summary": feature_summary_for_material(model_frame, material, feature_cols),
+            "thickness_stability": thickness_stability,
+            "source_stability": source_stability,
+            "long_source_count": int(long_part["source_id"].nunique()) if "source_id" in long_part.columns else 0,
+            "validation_dictionary_top1_accuracy": float(retrieval_part["dict_top1_correct"].mean()) if len(retrieval_part) else math.nan,
+            "validation_dictionary_top3_accuracy": float(retrieval_part["dict_top3_contains_true"].mean()) if len(retrieval_part) else math.nan,
+            "validation_confused_as": confused_as,
+        }
+        entries.append(entry)
+        table_rows.append(
+            {
+                "material": material,
+                "formula": catalog_row.get("formula", ""),
+                "density_g_cm3": catalog_row.get("density_g_cm3", ""),
+                "category": catalog_row.get("category", ""),
+                "group_label": catalog_row.get("group_label", ""),
+                "n_samples": int(proto["n_samples"]),
+                "feature_count": len(feature_cols),
+                "thickness_group_count": thickness_stability["group_count"],
+                "thickness_mean_profile_std": thickness_stability["mean_profile_std"],
+                "source_group_count": source_stability["group_count"],
+                "source_mean_profile_std": source_stability["mean_profile_std"],
+                "validation_dictionary_top1_accuracy": entry["validation_dictionary_top1_accuracy"],
+                "validation_dictionary_top3_accuracy": entry["validation_dictionary_top3_accuracy"],
+                "validation_confused_as": ";".join(confused_as),
+            }
+        )
+    return {
+        "feature_columns": feature_cols,
+        "materials": dictionary["materials"],
+        "entries": entries,
+    }, pd.DataFrame(table_rows)
+
+
 def build_sklearn_models(sk) -> dict[str, object]:
     return {
         "LogisticRegression": sk["make_pipeline"](
@@ -573,14 +790,22 @@ def evaluate_scores(
 
 def train_and_score(method: str, train: pd.DataFrame, eval_frame: pd.DataFrame, feature_cols: list[str], sk):
     if method == "PhysicsDictionaryNN":
-        physics_cols = [
-            col for col in feature_cols
-            if "__A_" in col or "__T_" in col or col.startswith("A_") or col.startswith("T_")
-        ]
-        if len(physics_cols) < 2:
-            physics_cols = feature_cols
-        model = CentroidModel(method, physics_cols, standardize=True).fit(train)
-        return model, *score_from_model(model, eval_frame, physics_cols)
+        model_cols = legacy_physics_dictionary_columns(feature_cols)
+        model = CentroidModel(method, model_cols, standardize=True).fit(train)
+        return model, *score_from_model(model, eval_frame, model_cols)
+    if method == "PhysicsOnly":
+        model_cols = physics_feature_columns(feature_cols)
+        model = CentroidModel(method, model_cols, standardize=True).fit(train)
+        return model, *score_from_model(model, eval_frame, model_cols)
+    if method == "DictionaryOnly":
+        model_cols = dictionary_feature_columns(feature_cols)
+        model = CentroidModel(method, model_cols, standardize=True).fit(train)
+        return model, *score_from_model(model, eval_frame, model_cols)
+    if method == "PhysicsPlusDictionary":
+        model_cols = physics_feature_columns(feature_cols) + dictionary_feature_columns(feature_cols)
+        model_cols = list(dict.fromkeys(model_cols))
+        model = CentroidModel(method, model_cols, standardize=True).fit(train)
+        return model, *score_from_model(model, eval_frame, model_cols)
     if method == "MahalanobisCentroid":
         model = CentroidModel(method, feature_cols, standardize=True).fit(train)
         return model, *score_from_model(model, eval_frame, feature_cols)
@@ -589,7 +814,14 @@ def train_and_score(method: str, train: pd.DataFrame, eval_frame: pd.DataFrame, 
     return model, *score_from_model(model, eval_frame, feature_cols)
 
 
-def decision_frame(frame: pd.DataFrame, predictions: np.ndarray, scores: np.ndarray, classes: np.ndarray) -> pd.DataFrame:
+def decision_frame(
+    frame: pd.DataFrame,
+    predictions: np.ndarray,
+    scores: np.ndarray,
+    classes: np.ndarray,
+    probability_threshold: float = REVIEW_PROBABILITY_THRESHOLD,
+    margin_threshold: float = REVIEW_MARGIN_THRESHOLD,
+) -> pd.DataFrame:
     order = np.argsort(scores, axis=1)[:, ::-1]
     top1_idx = order[:, 0]
     top2_idx = order[:, 1] if scores.shape[1] > 1 else order[:, 0]
@@ -601,25 +833,29 @@ def decision_frame(frame: pd.DataFrame, predictions: np.ndarray, scores: np.ndar
     rows = []
     for idx, (_, sample) in enumerate(frame.reset_index(drop=True).iterrows()):
         reasons = []
-        if score_is_probability and top1_score[idx] < REVIEW_PROBABILITY_THRESHOLD:
+        if score_is_probability and top1_score[idx] < probability_threshold:
             reasons.append("low_probability")
-        if score_margin[idx] < REVIEW_MARGIN_THRESHOLD:
+        if score_margin[idx] < margin_threshold:
             reasons.append("small_top1_top2_margin")
-        rows.append(
-            {
-                "material": sample["material"],
-                "predicted_material": predictions[idx],
-                "top1_score": float(top1_score[idx]),
-                "top2_score": float(top2_score[idx]),
-                "score_margin": float(score_margin[idx]),
-                "decision": "auto_sort" if not reasons else "review_unknown_or_ambiguous",
-                "review_reason": ";".join(reasons),
-                "top3_candidates": ";".join(classes[order[idx, :3]]),
-                "is_correct": bool(sample["material"] == predictions[idx]),
-                "thickness_mm": float(sample["thickness_mm"]),
-                "random_seed": int(sample["random_seed"]),
-            }
-        )
+        row = {
+            "material": sample["material"],
+            "predicted_material": predictions[idx],
+            "top1_score": float(top1_score[idx]),
+            "top2_score": float(top2_score[idx]),
+            "score_margin": float(score_margin[idx]),
+            "decision": "auto_sort" if not reasons else "review_unknown_or_ambiguous",
+            "review_reason": ";".join(reasons),
+            "top3_candidates": ";".join(classes[order[idx, :3]]),
+            "is_correct": bool(sample["material"] == predictions[idx]),
+            "thickness_mm": float(sample["thickness_mm"]),
+            "random_seed": int(sample["random_seed"]),
+            "probability_threshold": float(probability_threshold),
+            "margin_threshold": float(margin_threshold),
+        }
+        for col in ["dict_top1_material", "dict_top3_candidates", "dict_top1_distance", "dict_top2_distance", "dict_distance_margin"]:
+            if col in sample.index:
+                row[col] = sample[col]
+        rows.append(row)
     return pd.DataFrame(rows)
 
 
@@ -627,8 +863,22 @@ def write_csv(frame: pd.DataFrame | pd.Series, path: Path, *, index: bool = Fals
     frame.to_csv(path, index=index, lineterminator="\n")
 
 
+def json_safe(value):
+    if isinstance(value, dict):
+        return {str(key): json_safe(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [json_safe(item) for item in value]
+    if isinstance(value, np.integer):
+        return int(value)
+    if isinstance(value, np.floating):
+        value = float(value)
+    if isinstance(value, float) and not math.isfinite(value):
+        return None
+    return value
+
+
 def write_manifest(path: Path, manifest: dict) -> None:
-    path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2, allow_nan=False) + "\n", encoding="utf-8")
+    path.write_text(json.dumps(json_safe(manifest), ensure_ascii=False, indent=2, allow_nan=False) + "\n", encoding="utf-8")
 
 
 def json_energy_edges() -> list[float | str]:
@@ -670,6 +920,160 @@ def leakage_report(feature_cols: list[str], split_table: pd.DataFrame, status: d
         and not fragment_violations
         and TEST_SEED not in train_seed_set,
     }
+
+
+def review_metrics(decisions: pd.DataFrame) -> dict:
+    if decisions.empty:
+        return {"auto_sort_precision": 0.0, "review_rate": 1.0, "auto_sort_coverage": 0.0}
+    auto = decisions[decisions["decision"] == "auto_sort"]
+    return {
+        "auto_sort_precision": float(auto["is_correct"].mean()) if len(auto) else 0.0,
+        "review_rate": float((decisions["decision"] != "auto_sort").mean()),
+        "auto_sort_coverage": float((decisions["decision"] == "auto_sort").mean()),
+    }
+
+
+def threshold_candidates(scores: np.ndarray) -> tuple[list[float], list[float]]:
+    order = np.argsort(scores, axis=1)[:, ::-1]
+    top1 = scores[np.arange(len(scores)), order[:, 0]]
+    top2 = scores[np.arange(len(scores)), order[:, 1]] if scores.shape[1] > 1 else top1
+    margins = top1 - top2
+    is_probability = np.all(scores >= -1e-9) and np.allclose(scores.sum(axis=1), 1.0, atol=1e-3)
+    probability_grid = THRESHOLD_PROBABILITY_GRID if is_probability else [0.0]
+    margin_grid = sorted(
+        {
+            0.0,
+            REVIEW_MARGIN_THRESHOLD,
+            *[float(np.quantile(margins, q)) for q in THRESHOLD_MARGIN_QUANTILES],
+        }
+    )
+    return probability_grid, margin_grid
+
+
+def select_review_thresholds(
+    validation: pd.DataFrame,
+    predictions: np.ndarray,
+    scores: np.ndarray,
+    classes: np.ndarray,
+) -> tuple[dict, pd.DataFrame]:
+    rows = []
+    for probability_threshold in threshold_candidates(scores)[0]:
+        for margin_threshold in threshold_candidates(scores)[1]:
+            decisions = decision_frame(
+                validation,
+                predictions,
+                scores,
+                classes,
+                probability_threshold=probability_threshold,
+                margin_threshold=margin_threshold,
+            )
+            metrics = review_metrics(decisions)
+            rows.append(
+                {
+                    "probability_threshold": probability_threshold,
+                    "margin_threshold": margin_threshold,
+                    "auto_sort_precision": metrics["auto_sort_precision"],
+                    "review_rate": metrics["review_rate"],
+                    "auto_sort_coverage": metrics["auto_sort_coverage"],
+                    "auto_sort_samples": int((decisions["decision"] == "auto_sort").sum()),
+                    "review_samples": int((decisions["decision"] != "auto_sort").sum()),
+                }
+            )
+    table = pd.DataFrame(rows)
+    preferred = table[table["auto_sort_precision"] >= 0.90].copy()
+    if preferred.empty:
+        ranked = table.sort_values(
+            ["auto_sort_precision", "auto_sort_coverage", "review_rate"],
+            ascending=[False, False, True],
+        )
+    else:
+        ranked = preferred.sort_values(
+            ["auto_sort_coverage", "auto_sort_precision", "review_rate"],
+            ascending=[False, False, True],
+        )
+    selected = ranked.iloc[0].to_dict()
+    selected["selected_on"] = "validation_seed_only"
+    return selected, table.sort_values(["auto_sort_precision", "auto_sort_coverage"], ascending=[False, False])
+
+
+def per_class_recall_table(frame: pd.DataFrame, predictions: np.ndarray, split: str, sk) -> pd.DataFrame:
+    labels = np.array(TARGET_MATERIALS)
+    recalls = sk["recall_score"](
+        frame["material"].astype(str).to_numpy(),
+        predictions,
+        labels=labels,
+        average=None,
+        zero_division=0,
+    )
+    support = frame["material"].value_counts().to_dict()
+    return pd.DataFrame(
+        [
+            {
+                "split": split,
+                "material": material,
+                "support": int(support.get(material, 0)),
+                "recall": float(recall),
+            }
+            for material, recall in zip(labels, recalls)
+        ]
+    )
+
+
+def confusion_graph_table(
+    frame: pd.DataFrame,
+    predictions: np.ndarray,
+    scores: np.ndarray,
+    classes: np.ndarray,
+    split: str,
+) -> pd.DataFrame:
+    decisions = decision_frame(frame, predictions, scores, classes, probability_threshold=0.0, margin_threshold=0.0)
+    misses = decisions[~decisions["is_correct"]].copy()
+    if misses.empty:
+        return pd.DataFrame(columns=["split", "true_material", "predicted_material", "count", "mean_score_margin", "review_reason"])
+    rows = []
+    grouped = misses.groupby(["material", "predicted_material"], as_index=False)
+    for _, part in grouped:
+        rows.append(
+            {
+                "split": split,
+                "true_material": part["material"].iloc[0],
+                "predicted_material": part["predicted_material"].iloc[0],
+                "count": int(len(part)),
+                "mean_score_margin": float(part["score_margin"].mean()),
+                "review_reason": "validation_confusion_pair",
+            }
+        )
+    return pd.DataFrame(rows).sort_values(["count", "mean_score_margin"], ascending=[False, True])
+
+
+def feature_family_ablation(
+    train: pd.DataFrame,
+    validation: pd.DataFrame,
+    feature_cols: list[str],
+    sk,
+) -> pd.DataFrame:
+    rows = []
+    families = [family for family in FEATURE_FAMILY_ORDER if columns_for_families(feature_cols, {family})]
+    for family in families:
+        cols = columns_for_families(feature_cols, {family})
+        if len(cols) < 1:
+            continue
+        try:
+            _, predictions, scores, classes = train_and_score("ExtraTrees", train, validation, cols, sk)
+            metrics = evaluate_scores("ExtraTrees", validation, predictions, scores, classes, sk)
+        except Exception as exc:  # noqa: BLE001 - diagnostics should record failed families.
+            metrics = {
+                "method": "ExtraTrees",
+                "samples": int(len(validation)),
+                "top1_accuracy": math.nan,
+                "top3_accuracy": math.nan,
+                "macro_f1": math.nan,
+                "min_class_recall": math.nan,
+                "error": str(exc),
+            }
+        metrics.update({"feature_family": family, "feature_count": len(cols)})
+        rows.append(metrics)
+    return pd.DataFrame(rows)
 
 
 def run_pressure_thickness(frame: pd.DataFrame, feature_cols: list[str], method: str, sk) -> pd.DataFrame:
@@ -753,6 +1157,7 @@ def main() -> None:
     write_csv(fused, output_dir / "material_model_table_v2.csv")
     write_csv(pd.Series(base_feature_cols, name="feature"), output_dir / "base_feature_columns.csv")
     write_csv(pd.Series(base_feature_cols, name="feature"), output_dir / "material_feature_columns_v2.csv")
+    write_csv(feature_family_table(base_feature_cols), output_dir / "material_feature_families_v2.csv")
     write_csv(pd.Series(sorted(HARD_EXCLUDED_COLUMNS), name="excluded_column"), output_dir / "material_excluded_columns_v2.csv")
     write_csv(calibration, output_dir / "calibration_i0_table.csv")
     split_table = split_assignment_table(fused)
@@ -781,9 +1186,13 @@ def main() -> None:
     dev_validation = append_dictionary_features(validation, dev_dictionary)
     dev_feature_cols = numeric_feature_columns(dev_train)
     write_csv(pd.Series(dev_feature_cols, name="feature"), output_dir / "model_feature_columns.csv")
+    write_csv(feature_family_table(dev_feature_cols), output_dir / "model_feature_families.csv")
 
     methods = [
         "PhysicsDictionaryNN",
+        "PhysicsOnly",
+        "DictionaryOnly",
+        "PhysicsPlusDictionary",
         "MahalanobisCentroid",
         "LogisticRegression",
         "SVM_RBF",
@@ -802,10 +1211,50 @@ def main() -> None:
     selected_method = str(validation_summary.iloc[0]["method"])
     write_csv(validation_summary, output_dir / "model_selection_validation.csv")
     write_csv(validation_summary, output_dir / "material_model_summary_v2.csv")
+    write_csv(feature_family_ablation(dev_train, dev_validation, dev_feature_cols, sk), output_dir / "feature_family_ablation.csv")
+
+    _, validation_predictions, validation_scores, validation_classes = train_and_score(
+        selected_method, dev_train, dev_validation, dev_feature_cols, sk
+    )
+    selected_thresholds, threshold_table = select_review_thresholds(
+        dev_validation, validation_predictions, validation_scores, validation_classes
+    )
+    write_csv(threshold_table, output_dir / "threshold_selection_validation.csv")
+    validation_decisions = decision_frame(
+        dev_validation,
+        validation_predictions,
+        validation_scores,
+        validation_classes,
+        probability_threshold=float(selected_thresholds["probability_threshold"]),
+        margin_threshold=float(selected_thresholds["margin_threshold"]),
+    )
+    write_csv(validation_decisions, output_dir / "validation_decisions.csv")
+    validation_retrieval = candidate_retrieval_frame(validation, dev_dictionary, "validation")
+    write_csv(validation_retrieval, output_dir / "candidate_retrieval_validation.csv")
+    validation_confusion = confusion_graph_table(
+        dev_validation, validation_predictions, validation_scores, validation_classes, "validation"
+    )
+    write_csv(validation_confusion, output_dir / "material_confusion_graph.csv")
+    write_csv(
+        per_class_recall_table(dev_validation, validation_predictions, "validation", sk),
+        output_dir / "per_class_recall_validation.csv",
+    )
 
     final_train = pd.concat([train, validation], ignore_index=True)
     final_dictionary = fit_dictionary(final_train, base_feature_cols)
     write_manifest(output_dir / "material_dictionary.json", final_dictionary)
+    final_validation_retrieval = candidate_retrieval_frame(validation, final_dictionary, "validation_refit")
+    catalog = load_material_catalog(project_root)
+    enriched_json, enriched_table = enriched_dictionary(
+        final_dictionary,
+        catalog,
+        final_train,
+        calibrated,
+        final_validation_retrieval,
+        validation_confusion,
+    )
+    write_manifest(output_dir / "material_dictionary_enriched.json", enriched_json)
+    write_csv(enriched_table, output_dir / "material_dictionary_enriched.csv")
     dictionary_table = pd.DataFrame(
         [
             {
@@ -820,14 +1269,26 @@ def main() -> None:
 
     final_train_aug = append_dictionary_features(final_train, final_dictionary)
     final_test_aug = append_dictionary_features(test, final_dictionary)
+    final_test_retrieval = candidate_retrieval_frame(test, final_dictionary, "test")
+    for col in ["dict_top1_material", "dict_top3_candidates"]:
+        final_test_aug[col] = final_test_retrieval[col].to_numpy()
     final_feature_cols = numeric_feature_columns(final_train_aug)
     model, predictions, scores, classes = train_and_score(selected_method, final_train_aug, final_test_aug, final_feature_cols, sk)
     final_metrics = evaluate_scores(selected_method, final_test_aug, predictions, scores, classes, sk)
     final_summary = pd.DataFrame([final_metrics])
     write_csv(final_summary, output_dir / "final_test_summary.csv")
 
-    decisions = decision_frame(final_test_aug, predictions, scores, classes)
+    decisions = decision_frame(
+        final_test_aug,
+        predictions,
+        scores,
+        classes,
+        probability_threshold=float(selected_thresholds["probability_threshold"]),
+        margin_threshold=float(selected_thresholds["margin_threshold"]),
+    )
     write_csv(decisions, output_dir / "final_test_decisions.csv")
+    write_csv(final_validation_retrieval, output_dir / "candidate_retrieval_validation_refit.csv")
+    write_csv(final_test_retrieval, output_dir / "candidate_retrieval_final_test.csv")
     labels = np.array(TARGET_MATERIALS)
     cm = pd.DataFrame(
         sk["confusion_matrix"](final_test_aug["material"].astype(str), predictions, labels=labels),
@@ -835,6 +1296,10 @@ def main() -> None:
         columns=labels,
     )
     write_csv(cm, output_dir / f"final_test_confusion_{selected_method}.csv", index=True)
+    write_csv(
+        per_class_recall_table(final_test_aug, predictions, "test", sk),
+        output_dir / "per_class_recall_final_test.csv",
+    )
     pressure = run_pressure_thickness(fused, base_feature_cols, selected_method, sk)
     write_csv(pressure, output_dir / "pressure_leave_one_thickness_out.csv")
 
@@ -846,6 +1311,17 @@ def main() -> None:
         "final_test_metrics": final_metrics,
         "auto_sort_precision": auto_precision,
         "review_rate": review_rate,
+        "review_thresholds_selected_on_validation": {
+            "probability_threshold": float(selected_thresholds["probability_threshold"]),
+            "margin_threshold": float(selected_thresholds["margin_threshold"]),
+            "auto_sort_precision": float(selected_thresholds["auto_sort_precision"]),
+            "review_rate": float(selected_thresholds["review_rate"]),
+            "auto_sort_coverage": float(selected_thresholds["auto_sort_coverage"]),
+        },
+        "dictionary_retrieval": {
+            "validation": retrieval_summary(validation_retrieval, "validation"),
+            "final_test": retrieval_summary(final_test_retrieval, "test"),
+        },
         "criteria": {
             "top1_accuracy_ge_0_85": final_metrics["top1_accuracy"] >= 0.85,
             "macro_f1_ge_0_80": final_metrics["macro_f1"] >= 0.80,
@@ -870,12 +1346,16 @@ def main() -> None:
             "base_feature_count": len(base_feature_cols),
             "model_feature_count": len(final_feature_cols),
             "selected_by_validation": selected_method,
+            "feature_family_count": int(feature_family_table(dev_feature_cols)["family"].nunique()),
+            "feature_family_order": FEATURE_FAMILY_ORDER,
             "acceptance_status": acceptance,
             "stage_conclusion": stage_conclusion,
             "claim_boundary": [
                 "The final test seed is never used for model selection or dictionary fitting before final evaluation.",
+                "Review thresholds are selected on the validation seed before final test decisions are written.",
                 "If acceptance criteria fail, this package must not claim complete ten-material automatic sorting.",
                 "Dictionary distance features are fitted only from training or training+validation rows.",
+                "Catalog fields such as formula, density, category, and group label are written for explanation only and are blocklisted from model features.",
             ],
         }
     )
