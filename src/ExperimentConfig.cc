@@ -168,6 +168,9 @@ OreMaterialMode ParseOreMaterialMode(const std::string& rawValue)
   if (value == "mixture") {
     return OreMaterialMode::Mixture;
   }
+  if (value == "air_path" || value == "air" || value == "empty") {
+    return OreMaterialMode::AirPath;
+  }
 
   G4Exception("GetExperimentConfig()", "InvalidOreMaterialMode",
               FatalException,
@@ -222,6 +225,8 @@ ExperimentConfig LoadConfig()
       GetString(values, "research_route", config.researchRoute);
   config.predictionStage =
       GetString(values, "prediction_stage", config.predictionStage);
+  config.runRole =
+      GetString(values, "run_role", config.runRole);
   config.prepProfile =
       GetString(values, "prep_profile", config.prepProfile);
   config.feedSizeBand =
@@ -348,6 +353,8 @@ std::string OreMaterialModeToString(OreMaterialMode mode)
       return "single";
     case OreMaterialMode::Mixture:
       return "mixture";
+    case OreMaterialMode::AirPath:
+      return "air_path";
   }
 
   return "unknown";

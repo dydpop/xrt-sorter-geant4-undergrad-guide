@@ -127,6 +127,7 @@ void RunAction::WriteMetadataFile(G4int nofEvents,
   outFile << "  \"benchmark_suite\": \"" << config.benchmarkSuite << "\",\n";
   outFile << "  \"research_route\": \"" << config.researchRoute << "\",\n";
   outFile << "  \"prediction_stage\": \"" << config.predictionStage << "\",\n";
+  outFile << "  \"run_role\": \"" << config.runRole << "\",\n";
   outFile << "  \"prep_profile\": \"" << config.prepProfile << "\",\n";
   outFile << "  \"feed_size_band\": \"" << config.feedSizeBand << "\",\n";
   outFile << "  \"feed_condition\": \"" << config.feedCondition << "\",\n";

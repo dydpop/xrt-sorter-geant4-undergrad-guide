@@ -17,15 +17,16 @@
 | 文件 | 作用 |
 | --- | --- |
 | `exampleB1.cc`、`include/ExperimentConfig.hh`、`src/ExperimentConfig.cc`、`src/RunAction.cc` | 增加 `random_seed` 配置读取、随机种子设置和 metadata 输出 |
-| `analysis/generate_material_sorting_matrix.py` | 生成材料级分选矩阵配置 |
-| `analysis/run_material_sorting_matrix.py` | 批量或分批运行矩阵配置 |
+| `analysis/generate_material_sorting_matrix.py` | 生成材料级分选矩阵配置，v2 额外生成 air-path 校准配置 |
+| `analysis/run_material_sorting_matrix.py` | 批量或分批运行矩阵配置，支持 role 过滤、断点续跑和 status 汇总 |
 | `analysis/material_sorting.py` | 构建材料级特征表，训练多模型，输出 top-1/top-3、复核决策和开放集检查 |
+| `analysis/material_sorting_v2.py` | 构建校准后的多能谱物化指纹、材料字典特征和严格 seed 留出评估 |
 | `analysis/configs/run_material_sorting_pilot.mac` | pilot 配置使用的 Geant4 宏，单配置 2000 events |
 | `analysis/configs/run_material_sorting_full.mac` | full 配置使用的 Geant4 宏，单配置 10000 events |
 | `source_models/config/material_sorting_matrix/` | pilot/full 各 270 个配置：10 材料 x 3 厚度 x 3 源项 x 3 seed |
 | `results/material_sorting/` | 当前材料级诊断输出 |
 
-矩阵设计为 `10 materials x 3 thicknesses x 3 sources x 3 seeds = 270 runs`。这为后续更严谨的材料级实验留好了结构，但完整矩阵尚未全部运行。
+v1 矩阵设计为 `10 materials x 3 thicknesses x 3 sources x 3 seeds = 270 runs`。v2 在此基础上增加 `3 sources x 3 seeds = 9` 个 air-path 空束校准 run，因此完整 full 矩阵为 279 个 run。详见 `docs/MATERIAL_SORTING_V2_PROTOCOL_zh.md`。
 
 ## 3. 当前实际跑了什么
 

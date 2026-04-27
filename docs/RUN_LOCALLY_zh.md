@@ -112,7 +112,7 @@ python analysis/generate_material_sorting_matrix.py --profile pilot
 python analysis/generate_material_sorting_matrix.py --profile full
 ```
 
-矩阵规模为 `10 materials x 3 thicknesses x 3 sources x 3 seeds = 270 runs`。可以先跑一个很小的 smoke test，确认新增 `random_seed` 配置会进入 Geant4 metadata：
+矩阵规模为 `10 materials x 3 thicknesses x 3 sources x 3 seeds = 270 runs`。v2 协议还会额外生成 `3 sources x 3 seeds = 9` 个 air-path 校准 run。可以先跑一个很小的 smoke test，确认新增 `random_seed` 配置会进入 Geant4 metadata：
 
 ```bash
 python analysis/run_material_sorting_matrix.py --profile pilot --limit 3
@@ -125,6 +125,17 @@ python analysis/material_sorting.py
 ```
 
 当前提交中的 `results/material_sorting/` 是诊断证据，不是成功材料级分选结论。旧公开数据上的主方法 top-1 accuracy 为 `0.464`，top-3 accuracy 为 `0.876`，macro-F1 为 `0.4486`，所有验收条件均未通过。完整 pilot/full 矩阵尚未运行；如果后续要继续，应先完成完整矩阵，再用 seed holdout 或 run-level holdout 重新评价。
+
+v2 物化指纹和字典底座的推荐流程是：
+
+```bash
+python analysis/run_material_sorting_matrix.py --profile full --role calibration
+python analysis/run_material_sorting_matrix.py --profile full --role material --start 0 --limit 30
+python analysis/run_material_sorting_matrix.py --profile full --role material --status-only
+python analysis/material_sorting_v2.py
+```
+
+`analysis/material_sorting_v2.py` 默认读取 `build/material_sorting_runs/full`，并输出到 `results/material_sorting_v2/`。如果 full 矩阵不完整，它只写 incomplete manifest 并停止，不会回退旧数据。
 
 ## 8. 常见问题
 

@@ -84,6 +84,8 @@ Geant4 运行后会在 `build/` 下生成 `*_events.csv`、`*_hits.csv` 和 meta
 `docs/GLOSSARY_BY_FIRST_APPEARANCE.md` 解释术语，避免组员因为 Geant4、XRT、event、primary gamma、Logistic Regression 等词卡住。
 `docs/MATERIAL_LEVEL_SORTING_DIAGNOSTIC_zh.md` 记录十材料物种级诊断为什么未通过，以及后续应如何继续。
 
+`docs/MATERIAL_SORTING_V2_PROTOCOL_zh.md` 记录十材料 v2 的 air-path 校准、物化指纹、字典底座和 seed 留出评估协议。
+
 `docs/public_explainer_zh.md` 是最短的通俗讲解，适合发给只想快速知道项目做了什么的人。
 
 `docs/FINAL_ELEMENTARY_REVIEW_zh.md` 是最终边界复核，适合在答辩或交接前检查哪些表述可以说、哪些表述不能说。

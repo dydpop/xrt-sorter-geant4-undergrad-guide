@@ -19,7 +19,8 @@ enum class OreShape
 enum class OreMaterialMode
 {
   Single,
-  Mixture
+  Mixture,
+  AirPath
 };
 
 enum class HeterogeneityMode
@@ -38,6 +39,7 @@ struct ExperimentConfig
   std::string benchmarkSuite = "sim_only_v1";
   std::string researchRoute = "lab";
   std::string predictionStage = "fine";
+  std::string runRole = "material";
   std::string prepProfile = "medium_prep";
   std::string feedSizeBand = "standard_block";
   std::string feedCondition = "clean_dry_single_piece";

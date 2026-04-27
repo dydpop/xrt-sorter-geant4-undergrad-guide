@@ -28,6 +28,7 @@ PROFILE_EVENTS = {"pilot": 2000, "full": 10000}
 @dataclass(frozen=True)
 class MatrixRun:
     profile: str
+    run_role: str
     material_name: str
     material_slug: str
     source_id: str
@@ -55,10 +56,16 @@ def load_materials(project_root: Path) -> pd.DataFrame:
 
 def render_config(run: MatrixRun, source: dict) -> str:
     spectrum_file = source.get("spectrum_file", "../../../spectra/w_target_120kV_1mmAl.csv")
-    label = (
-        f"material_sorting_{run.profile}_{run.material_slug}_{run.source_id}_"
-        f"{int(run.thickness_mm)}mm_seed{run.random_seed}"
-    )
+    if run.run_role == "material":
+        label = (
+            f"material_sorting_{run.profile}_{run.material_slug}_{run.source_id}_"
+            f"{int(run.thickness_mm)}mm_seed{run.random_seed}"
+        )
+    else:
+        label = f"material_sorting_{run.profile}_calibration_{run.source_id}_seed{run.random_seed}"
+    ore_material_mode = "air_path" if run.run_role == "calibration" else "single"
+    ore_primary_material = "AIR_PATH" if run.run_role == "calibration" else run.material_name
+    ore_thickness_mm = 1.0 if run.run_role == "calibration" else run.thickness_mm
     return f"""# Material sorting matrix config: {label}
 run_id = {label}
 experiment_label = {label}
@@ -67,6 +74,7 @@ output_dir = {run.output_dir}
 benchmark_suite = material_sorting_v1
 research_route = undergraduate_sorting_upgrade
 prediction_stage = material_level
+run_role = {run.run_role}
 prep_profile = clean_dry_single_piece
 feed_size_band = controlled_slab
 feed_condition = simulated_single_material
@@ -86,13 +94,13 @@ dir_x = 1.0
 dir_y = 0.0
 dir_z = 0.0
 
-ore_material_mode = single
-ore_primary_material = {run.material_name}
+ore_material_mode = {ore_material_mode}
+ore_primary_material = {ore_primary_material}
 ore_secondary_material = Magnetite
 ore_secondary_mass_fraction = 0.0
 
 ore_shape = slab
-ore_thickness_mm = {run.thickness_mm:.1f}
+ore_thickness_mm = {ore_thickness_mm:.1f}
 ore_half_y_mm = 100.0
 ore_half_z_mm = 100.0
 
@@ -125,6 +133,27 @@ def build_matrix(project_root: Path, profile: str) -> list[MatrixRun]:
     out_dir = OUTPUT_ROOT / profile
     raw_output_dir = f"material_sorting_runs/{profile}"
     runs: list[MatrixRun] = []
+    for source in SOURCES:
+        for seed in SEEDS:
+            output_prefix = f"ms_{profile}_calibration_{source['source_id']}_seed{seed}"
+            config_path = out_dir / f"{output_prefix}.txt"
+            runs.append(
+                MatrixRun(
+                    profile=profile,
+                    run_role="calibration",
+                    material_name="AIR_PATH",
+                    material_slug="calibration",
+                    source_id=source["source_id"],
+                    source_mode=source["source_mode"],
+                    mono_energy_keV=float(source["mono_energy_keV"]),
+                    thickness_mm=1.0,
+                    random_seed=seed,
+                    config_path=config_path,
+                    output_prefix=output_prefix,
+                    output_dir=raw_output_dir,
+                    expected_events=expected_events,
+                )
+            )
     for row in materials.itertuples(index=False):
         material_slug = slugify(str(row.material_name))
         for thickness in THICKNESS_MM:
@@ -138,6 +167,7 @@ def build_matrix(project_root: Path, profile: str) -> list[MatrixRun]:
                     runs.append(
                         MatrixRun(
                             profile=profile,
+                            run_role="material",
                             material_name=str(row.material_name),
                             material_slug=material_slug,
                             source_id=source["source_id"],
@@ -168,6 +198,7 @@ def write_matrix(project_root: Path, profile: str) -> Path:
         rows.append(
             {
                 "profile": run.profile,
+                "run_role": run.run_role,
                 "material": run.material_name,
                 "source_id": run.source_id,
                 "source_mode": run.source_mode,
@@ -199,7 +230,8 @@ def main() -> None:
     matrix_path = write_matrix(project_root, args.profile)
     runs = list(csv.DictReader(matrix_path.open(encoding="utf-8")))
     print(f"Wrote {len(runs)} {args.profile} configs to {matrix_path}")
-    print("Expected matrix: 10 materials x 3 thicknesses x 3 sources x 3 seeds = 270 runs")
+    print("Expected material matrix: 10 materials x 3 thicknesses x 3 sources x 3 seeds = 270 runs")
+    print("Expected calibration matrix: 3 sources x 3 seeds = 9 runs")
 
 
 if __name__ == "__main__":

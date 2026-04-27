@@ -120,6 +120,10 @@ def matrix_run_records(project_root: Path, raw_dir: Path) -> list[dict]:
     records = []
     for meta_path in sorted(raw_dir.rglob("*_metadata.json")):
         meta = read_metadata(meta_path)
+        if str(meta.get("run_role", "")).lower() == "calibration":
+            continue
+        if str(meta.get("ore_material_mode", "")).lower() == "air_path":
+            continue
         material = str(meta.get("ore_primary_material", ""))
         if material not in TARGET_MATERIALS:
             continue

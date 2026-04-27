@@ -6,6 +6,7 @@ output_dir = material_sorting_runs/pilot
 benchmark_suite = material_sorting_v1
 research_route = undergraduate_sorting_upgrade
 prediction_stage = material_level
+run_role = material
 prep_profile = clean_dry_single_piece
 feed_size_band = controlled_slab
 feed_condition = simulated_single_material

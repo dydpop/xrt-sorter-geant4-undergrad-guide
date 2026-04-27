@@ -115,6 +115,10 @@ G4Material* BuildNamedOreMaterial(const std::string& name, G4NistManager* nist)
 G4Material* BuildConfiguredOreMaterial(const ExperimentConfig& config,
                                        G4NistManager* nist)
 {
+  if (config.oreMaterialMode == OreMaterialMode::AirPath) {
+    return nist->FindOrBuildMaterial("G4_AIR");
+  }
+
   auto* primary = BuildNamedOreMaterial(config.orePrimaryMaterial, nist);
   if (config.oreMaterialMode == OreMaterialMode::Single ||
       config.oreSecondaryMassFraction <= 0.0) {
@@ -218,7 +222,8 @@ G4VPhysicalVolume* DetectorConstruction::Construct()
   new G4PVPlacement(nullptr, G4ThreeVector(0, 0, 0), logicOre, "OreBody",
                     logicEnv, false, 0, checkOverlaps);
 
-  if (config.heterogeneityMode == HeterogeneityMode::Inclusion) {
+  if (config.heterogeneityMode == HeterogeneityMode::Inclusion &&
+      config.oreMaterialMode != OreMaterialMode::AirPath) {
     auto* inclusionMat = BuildNamedOreMaterial(config.inclusionMaterial, nist);
     auto* solidInclusion = BuildOreSolid("OreInclusion",
                                          config.inclusionShape,

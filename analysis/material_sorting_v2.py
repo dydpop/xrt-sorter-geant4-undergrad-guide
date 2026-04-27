@@ -1,0 +1,889 @@
+from __future__ import annotations
+
+import argparse
+import json
+import math
+import platform
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+
+PHOTONS_PER_SAMPLE = 100
+TRAIN_SEED = 101
+VALIDATION_SEED = 202
+TEST_SEED = 303
+TARGET_MATERIALS = [
+    "Quartz",
+    "Calcite",
+    "Orthoclase",
+    "Albite",
+    "Dolomite",
+    "Pyrite",
+    "Hematite",
+    "Magnetite",
+    "Chalcopyrite",
+    "Galena",
+]
+EXPECTED_THICKNESSES = [5.0, 10.0, 20.0]
+EXPECTED_SOURCES = ["mono_60kev", "mono_100kev", "spectrum_120kv"]
+EXPECTED_SEEDS = [TRAIN_SEED, VALIDATION_SEED, TEST_SEED]
+ENERGY_EDGES = [0.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0, 110.0, 120.0, math.inf]
+REVIEW_PROBABILITY_THRESHOLD = 0.65
+REVIEW_MARGIN_THRESHOLD = 0.15
+EPS = 0.5
+HARD_EXCLUDED_COLUMNS = {
+    "material",
+    "true_material",
+    "formula",
+    "category",
+    "density_g_cm3",
+    "fine_label",
+    "coarse_label",
+    "group_label",
+    "label_id",
+    "fine_label_id",
+    "coarse_label_id",
+    "target_id",
+    "held_out_material",
+    "is_correct",
+    "sample_key",
+    "run_id",
+    "experiment_label",
+    "profile_name",
+    "output_prefix",
+    "config_path",
+    "event_file",
+    "hit_file",
+    "metadata_path",
+    "row_index",
+    "sample_id",
+    "event_id_min",
+    "event_id_max",
+    "random_seed",
+    "split",
+    "original_split",
+    "run_role",
+}
+FORBIDDEN_FEATURE_FRAGMENTS = ["formula", "density", "group_label", "config_path", "output_prefix", "ore_primary_material"]
+
+
+@dataclass(frozen=True)
+class RunRecord:
+    run_role: str
+    material: str
+    source_id: str
+    thickness_mm: float
+    random_seed: int
+    run_id: str
+    event_file: Path
+    hit_file: Path
+    metadata_file: Path
+
+
+class CentroidModel:
+    def __init__(self, method: str, feature_cols: list[str], standardize: bool) -> None:
+        self.method = method
+        self.feature_cols = feature_cols
+        self.standardize = standardize
+        self.classes_: np.ndarray | None = None
+        self.center_: np.ndarray | None = None
+        self.scale_: np.ndarray | None = None
+        self.centroids_: dict[str, np.ndarray] = {}
+
+    def fit(self, frame: pd.DataFrame) -> "CentroidModel":
+        x = frame[self.feature_cols].to_numpy(dtype=float)
+        self.center_ = x.mean(axis=0)
+        self.scale_ = x.std(axis=0)
+        self.scale_[self.scale_ < 1e-9] = 1.0
+        z = self._transform(x)
+        labels = frame["material"].astype(str).to_numpy()
+        self.classes_ = np.array(sorted(set(labels)))
+        self.centroids_ = {
+            label: z[labels == label].mean(axis=0) for label in self.classes_
+        }
+        return self
+
+    def _transform(self, x: np.ndarray) -> np.ndarray:
+        if self.center_ is None or self.scale_ is None:
+            raise RuntimeError("CentroidModel must be fitted first.")
+        if not self.standardize:
+            return x
+        return (x - self.center_) / self.scale_
+
+    def score_matrix(self, frame: pd.DataFrame) -> tuple[np.ndarray, np.ndarray]:
+        if self.classes_ is None:
+            raise RuntimeError("CentroidModel must be fitted first.")
+        z = self._transform(frame[self.feature_cols].to_numpy(dtype=float))
+        distances = []
+        for label in self.classes_:
+            distances.append(np.linalg.norm(z - self.centroids_[label], axis=1))
+        distance_matrix = np.vstack(distances).T
+        return -distance_matrix, self.classes_
+
+    def predict(self, frame: pd.DataFrame) -> np.ndarray:
+        scores, classes = self.score_matrix(frame)
+        return classes[np.argmax(scores, axis=1)]
+
+
+def require_sklearn():
+    try:
+        from sklearn.ensemble import ExtraTreesClassifier, HistGradientBoostingClassifier, RandomForestClassifier
+        from sklearn.linear_model import LogisticRegression
+        from sklearn.metrics import confusion_matrix, f1_score, recall_score
+        from sklearn.neural_network import MLPClassifier
+        from sklearn.pipeline import make_pipeline
+        from sklearn.preprocessing import StandardScaler
+        from sklearn.svm import SVC
+    except ModuleNotFoundError as exc:
+        raise SystemExit(
+            "material_sorting_v2.py requires scikit-learn. Install with: pip install pandas scikit-learn"
+        ) from exc
+
+    return {
+        "ExtraTreesClassifier": ExtraTreesClassifier,
+        "HistGradientBoostingClassifier": HistGradientBoostingClassifier,
+        "RandomForestClassifier": RandomForestClassifier,
+        "LogisticRegression": LogisticRegression,
+        "confusion_matrix": confusion_matrix,
+        "f1_score": f1_score,
+        "MLPClassifier": MLPClassifier,
+        "make_pipeline": make_pipeline,
+        "recall_score": recall_score,
+        "StandardScaler": StandardScaler,
+        "SVC": SVC,
+    }
+
+
+def source_id_from_metadata(meta: dict) -> str:
+    mode = str(meta.get("source_mode", "unknown"))
+    if mode == "mono":
+        return f"mono_{int(float(meta.get('mono_energy_keV', 0)))}kev"
+    if mode == "spectrum":
+        return "spectrum_120kv"
+    return mode
+
+
+def bin_labels() -> list[str]:
+    labels = []
+    for low, high in zip(ENERGY_EDGES[:-1], ENERGY_EDGES[1:]):
+        if math.isinf(high):
+            labels.append(f"e_{int(low):03d}_inf")
+        else:
+            labels.append(f"e_{int(low):03d}_{int(high):03d}")
+    return labels
+
+
+def read_metadata(path: Path) -> dict:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def resolve_record_path(project_root: Path, raw_path: str) -> Path:
+    path = Path(raw_path)
+    if path.exists():
+        return path
+    posix = raw_path.replace("\\", "/")
+    marker = project_root.name + "/"
+    if marker in posix:
+        suffix = posix.split(marker, 1)[1]
+        candidate = project_root / suffix
+        if candidate.exists():
+            return candidate
+    return path
+
+
+def discover_records(project_root: Path, raw_dir: Path) -> tuple[list[RunRecord], list[RunRecord]]:
+    material_records: list[RunRecord] = []
+    calibration_records: list[RunRecord] = []
+    for meta_path in sorted(raw_dir.rglob("*_metadata.json")):
+        meta = read_metadata(meta_path)
+        run_role = str(meta.get("run_role", "")).strip().lower()
+        ore_mode = str(meta.get("ore_material_mode", "")).strip().lower()
+        material = str(meta.get("ore_primary_material", ""))
+        if not run_role:
+            run_role = "calibration" if ore_mode == "air_path" else "material"
+        record = RunRecord(
+            run_role=run_role,
+            material="AIR_PATH" if run_role == "calibration" else material,
+            source_id=source_id_from_metadata(meta),
+            thickness_mm=float(meta.get("ore_thickness_mm", 0.0)),
+            random_seed=int(meta.get("random_seed", -1)),
+            run_id=str(meta.get("run_id", meta_path.stem)),
+            event_file=resolve_record_path(project_root, str(meta["event_file"])),
+            hit_file=resolve_record_path(project_root, str(meta["hit_file"])),
+            metadata_file=meta_path,
+        )
+        if record.run_role == "calibration" or ore_mode == "air_path":
+            calibration_records.append(record)
+        elif record.material in TARGET_MATERIALS:
+            material_records.append(record)
+    return material_records, calibration_records
+
+
+def records_inventory(material_records: list[RunRecord], calibration_records: list[RunRecord]) -> pd.DataFrame:
+    rows = []
+    for record in [*material_records, *calibration_records]:
+        rows.append(
+            {
+                "run_role": record.run_role,
+                "material": record.material,
+                "source_id": record.source_id,
+                "thickness_mm": record.thickness_mm,
+                "random_seed": record.random_seed,
+                "run_id": record.run_id,
+                "metadata_path": record.metadata_file.as_posix(),
+                "event_file_exists": record.event_file.exists(),
+                "hit_file_exists": record.hit_file.exists(),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def aggregate_run(record: RunRecord) -> pd.DataFrame:
+    events = pd.read_csv(record.event_file).sort_values("event_id").reset_index(drop=True)
+    complete = len(events) // PHOTONS_PER_SAMPLE
+    events = events.iloc[: complete * PHOTONS_PER_SAMPLE].copy()
+    if events.empty:
+        raise ValueError(f"No complete {PHOTONS_PER_SAMPLE}-photon samples in {record.event_file}")
+    events["sample_id"] = events["event_id"] // PHOTONS_PER_SAMPLE
+    grouped = (
+        events.groupby("sample_id")
+        .agg(
+            n_events=("event_id", "count"),
+            detector_edep_sum=("detector_edep_keV", "sum"),
+            detector_edep_mean=("detector_edep_keV", "mean"),
+            detector_edep_std=("detector_edep_keV", "std"),
+            detector_edep_max=("detector_edep_keV", "max"),
+            detector_gamma_sum=("detector_gamma_entries", "sum"),
+            primary_gamma_sum=("primary_gamma_entries", "sum"),
+        )
+        .reset_index()
+    )
+    grouped["detector_edep_std"] = grouped["detector_edep_std"].fillna(0.0)
+    grouped["detector_gamma_rate"] = grouped["detector_gamma_sum"] / grouped["n_events"]
+    grouped["primary_transmission_rate"] = grouped["primary_gamma_sum"] / grouped["n_events"]
+
+    label_cols = bin_labels()
+    for col in label_cols:
+        grouped[f"I_{col}"] = 0.0
+    grouped["hit_count"] = 0.0
+    grouped["direct_primary_count"] = 0.0
+    grouped["scattered_primary_count"] = 0.0
+    grouped["hit_energy_mean"] = 0.0
+    grouped["hit_energy_std"] = 0.0
+    grouped["theta_mean"] = 0.0
+    grouped["theta_std"] = 0.0
+    grouped["r_mean"] = 0.0
+    grouped["r_std"] = 0.0
+
+    if record.hit_file.exists() and record.hit_file.stat().st_size > 100:
+        hits = pd.read_csv(record.hit_file)
+        hits["sample_id"] = hits["event_id"] // PHOTONS_PER_SAMPLE
+        hits["r_mm"] = np.sqrt(hits["y_mm"] ** 2 + hits["z_mm"] ** 2)
+        by_sample = hits.groupby("sample_id")
+        for sample_id, part in by_sample:
+            mask = grouped["sample_id"] == sample_id
+            energies = part["photon_energy_keV"].to_numpy(dtype=float)
+            counts, _ = np.histogram(energies, bins=np.array(ENERGY_EDGES, dtype=float))
+            for col, count in zip(label_cols, counts):
+                grouped.loc[mask, f"I_{col}"] = float(count)
+            grouped.loc[mask, "hit_count"] = float(len(part))
+            grouped.loc[mask, "direct_primary_count"] = float(part["is_direct_primary"].sum())
+            grouped.loc[mask, "scattered_primary_count"] = float(part["is_scattered_primary"].sum())
+            grouped.loc[mask, "hit_energy_mean"] = float(part["photon_energy_keV"].mean())
+            grouped.loc[mask, "hit_energy_std"] = float(part["photon_energy_keV"].std(ddof=0))
+            grouped.loc[mask, "theta_mean"] = float(part["theta_deg"].replace(-1.0, np.nan).mean(skipna=True) or 0.0)
+            grouped.loc[mask, "theta_std"] = float(part["theta_deg"].replace(-1.0, np.nan).std(ddof=0) or 0.0)
+            grouped.loc[mask, "r_mean"] = float(part["r_mm"].mean())
+            grouped.loc[mask, "r_std"] = float(part["r_mm"].std(ddof=0))
+
+    grouped.insert(0, "run_id", record.run_id)
+    grouped.insert(0, "random_seed", record.random_seed)
+    grouped.insert(0, "thickness_mm", record.thickness_mm)
+    grouped.insert(0, "source_id", record.source_id)
+    grouped.insert(0, "material", record.material)
+    grouped.insert(0, "run_role", record.run_role)
+    return grouped.fillna(0.0)
+
+
+def calibration_table(calibration_records: list[RunRecord]) -> pd.DataFrame:
+    frames = [aggregate_run(record) for record in calibration_records]
+    if not frames:
+        return pd.DataFrame()
+    frame = pd.concat(frames, ignore_index=True)
+    count_cols = [f"I_{label}" for label in bin_labels()]
+    return (
+        frame.groupby(["source_id", "random_seed"], as_index=False)[count_cols]
+        .mean()
+        .rename(columns={col: f"I0_{col[2:]}" for col in count_cols})
+    )
+
+
+def apply_calibration(samples: pd.DataFrame, calibration: pd.DataFrame) -> pd.DataFrame:
+    if calibration.empty:
+        raise ValueError("No calibration runs found. Run calibration matrix rows first.")
+    merged = samples.merge(calibration, on=["source_id", "random_seed"], how="left", validate="many_to_one")
+    missing = merged[[f"I0_{label}" for label in bin_labels()]].isna().any(axis=1)
+    if missing.any():
+        missing_keys = (
+            merged.loc[missing, ["source_id", "random_seed"]]
+            .drop_duplicates()
+            .to_dict(orient="records")
+        )
+        raise ValueError(f"Missing calibration for source/seed keys: {missing_keys}")
+
+    edges_mid = []
+    for low, high in zip(ENERGY_EDGES[:-1], ENERGY_EDGES[1:]):
+        edges_mid.append(low + 10.0 if math.isinf(high) else (low + high) / 2.0)
+
+    i_cols = [f"I_{label}" for label in bin_labels()]
+    i0_cols = [f"I0_{label}" for label in bin_labels()]
+    for label in bin_labels():
+        i_col = f"I_{label}"
+        i0_col = f"I0_{label}"
+        t_col = f"T_{label}"
+        a_col = f"A_{label}"
+        an_col = f"A_per_mm_{label}"
+        merged[t_col] = (merged[i_col] + EPS) / (merged[i0_col] + EPS)
+        merged[a_col] = -np.log(np.clip(merged[t_col], 1e-6, 1e6))
+        merged[an_col] = merged[a_col] / merged["thickness_mm"].clip(lower=1e-6)
+
+    low_i = merged[[col for col in i_cols if not col.startswith("I_e_080") and not col.startswith("I_e_090") and not col.startswith("I_e_100") and not col.startswith("I_e_110") and not col.startswith("I_e_120")]].sum(axis=1)
+    high_i = merged[[col for col in i_cols if col.startswith("I_e_080") or col.startswith("I_e_090") or col.startswith("I_e_100") or col.startswith("I_e_110") or col.startswith("I_e_120")]].sum(axis=1)
+    low_i0 = merged[[col for col in i0_cols if not col.startswith("I0_e_080") and not col.startswith("I0_e_090") and not col.startswith("I0_e_100") and not col.startswith("I0_e_110") and not col.startswith("I0_e_120")]].sum(axis=1)
+    high_i0 = merged[[col for col in i0_cols if col.startswith("I0_e_080") or col.startswith("I0_e_090") or col.startswith("I0_e_100") or col.startswith("I0_e_110") or col.startswith("I0_e_120")]].sum(axis=1)
+    merged["T_low_0_80"] = (low_i + EPS) / (low_i0 + EPS)
+    merged["T_high_80_inf"] = (high_i + EPS) / (high_i0 + EPS)
+    merged["A_low_0_80"] = -np.log(np.clip(merged["T_low_0_80"], 1e-6, 1e6))
+    merged["A_high_80_inf"] = -np.log(np.clip(merged["T_high_80_inf"], 1e-6, 1e6))
+    merged["dual_log_ratio_low_high"] = np.log(
+        np.clip(merged["T_low_0_80"], 1e-6, 1e6)
+    ) - np.log(np.clip(merged["T_high_80_inf"], 1e-6, 1e6))
+
+    counts = merged[i_cols].to_numpy(dtype=float)
+    totals = counts.sum(axis=1)
+    mids = np.array(edges_mid, dtype=float)
+    weighted_mean = np.divide(counts @ mids, totals, out=np.zeros(len(merged)), where=totals > 0)
+    weighted_second = np.divide(counts @ (mids ** 2), totals, out=np.zeros(len(merged)), where=totals > 0)
+    merged["spectrum_centroid_keV"] = weighted_mean
+    merged["spectrum_std_keV"] = np.sqrt(np.clip(weighted_second - weighted_mean ** 2, 0.0, None))
+    merged["direct_primary_fraction_stable"] = merged["direct_primary_count"] / (
+        merged["direct_primary_count"] + merged["scattered_primary_count"] + 1.0
+    )
+    merged["scattered_primary_fraction_stable"] = merged["scattered_primary_count"] / (
+        merged["direct_primary_count"] + merged["scattered_primary_count"] + 1.0
+    )
+    merged["log_scatter_minus_direct"] = np.log1p(merged["scattered_primary_count"]) - np.log1p(merged["direct_primary_count"])
+    return merged.replace([np.inf, -np.inf], np.nan).fillna(0.0)
+
+
+def numeric_feature_columns(frame: pd.DataFrame) -> list[str]:
+    cols = []
+    for col in frame.columns:
+        if col in HARD_EXCLUDED_COLUMNS or any(fragment in col for fragment in FORBIDDEN_FEATURE_FRAGMENTS):
+            continue
+        if pd.api.types.is_numeric_dtype(frame[col]) and float(frame[col].std()) > 1e-12:
+            cols.append(col)
+    return cols
+
+
+def fuse_sources(samples: pd.DataFrame) -> tuple[pd.DataFrame, str]:
+    if samples["source_id"].nunique() < 2:
+        return samples.copy(), "single_source"
+    keys = ["material", "thickness_mm", "random_seed", "sample_id"]
+    base_cols = numeric_feature_columns(samples)
+    base_cols = [col for col in base_cols if col not in {"thickness_mm"}]
+    pieces = []
+    for source_id, part in samples.groupby("source_id"):
+        renamed = part[keys + base_cols].copy()
+        renamed = renamed.rename(columns={col: f"{source_id}__{col}" for col in base_cols})
+        pieces.append(renamed)
+    fused = pieces[0]
+    for piece in pieces[1:]:
+        fused = fused.merge(piece, on=keys, how="inner")
+    if fused.empty:
+        return samples.copy(), "single_source_unpaired"
+    if {
+        "mono_60kev__primary_transmission_rate",
+        "mono_100kev__primary_transmission_rate",
+    }.issubset(fused.columns):
+        fused["dual_source_log_transmission_ratio_60_100"] = np.log(
+            (fused["mono_60kev__primary_transmission_rate"] + EPS)
+            / (fused["mono_100kev__primary_transmission_rate"] + EPS)
+        )
+    return fused.replace([np.inf, -np.inf], np.nan).fillna(0.0), "multi_source_fused"
+
+
+def matrix_status(material_records: list[RunRecord], calibration_records: list[RunRecord]) -> dict:
+    material_keys = {
+        (r.material, round(r.thickness_mm, 3), r.source_id, r.random_seed) for r in material_records
+    }
+    calibration_keys = {(r.source_id, r.random_seed) for r in calibration_records}
+    expected_material_keys = {
+        (material, thickness, source, seed)
+        for material in TARGET_MATERIALS
+        for thickness in EXPECTED_THICKNESSES
+        for source in EXPECTED_SOURCES
+        for seed in EXPECTED_SEEDS
+    }
+    expected_calibration_keys = {
+        (source, seed) for source in EXPECTED_SOURCES for seed in EXPECTED_SEEDS
+    }
+    return {
+        "material_metadata_found": len(material_records),
+        "calibration_metadata_found": len(calibration_records),
+        "materials_found": sorted({r.material for r in material_records}),
+        "sources_found": sorted({r.source_id for r in material_records}),
+        "thicknesses_found": sorted({r.thickness_mm for r in material_records}),
+        "seeds_found": sorted({r.random_seed for r in material_records}),
+        "missing_material_runs": len(expected_material_keys - material_keys),
+        "missing_calibration_runs": len(expected_calibration_keys - calibration_keys),
+        "complete_target_material_set": {r.material for r in material_records} == set(TARGET_MATERIALS),
+        "complete_full_matrix": expected_material_keys.issubset(material_keys) and expected_calibration_keys.issubset(calibration_keys),
+    }
+
+
+def split_frames(frame: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    train = frame[frame["random_seed"] == TRAIN_SEED].copy()
+    validation = frame[frame["random_seed"] == VALIDATION_SEED].copy()
+    test = frame[frame["random_seed"] == TEST_SEED].copy()
+    return train, validation, test
+
+
+def fit_dictionary(frame: pd.DataFrame, feature_cols: list[str]) -> dict:
+    x = frame[feature_cols].to_numpy(dtype=float)
+    center = x.mean(axis=0)
+    scale = x.std(axis=0)
+    scale[scale < 1e-9] = 1.0
+    z = (x - center) / scale
+    labels = frame["material"].astype(str).to_numpy()
+    materials = sorted(set(labels))
+    prototypes = {}
+    for material in materials:
+        part = z[labels == material]
+        prototypes[material] = {
+            "mean": part.mean(axis=0).tolist(),
+            "std": part.std(axis=0).tolist(),
+            "n_samples": int(len(part)),
+        }
+    return {
+        "feature_columns": feature_cols,
+        "center": center.tolist(),
+        "scale": scale.tolist(),
+        "materials": materials,
+        "prototypes": prototypes,
+    }
+
+
+def dictionary_distances(frame: pd.DataFrame, dictionary: dict) -> pd.DataFrame:
+    feature_cols = dictionary["feature_columns"]
+    center = np.array(dictionary["center"], dtype=float)
+    scale = np.array(dictionary["scale"], dtype=float)
+    x = (frame[feature_cols].to_numpy(dtype=float) - center) / scale
+    result = pd.DataFrame(index=frame.index)
+    distance_cols = []
+    for material in dictionary["materials"]:
+        centroid = np.array(dictionary["prototypes"][material]["mean"], dtype=float)
+        col = f"dict_dist_{material}"
+        result[col] = np.linalg.norm(x - centroid, axis=1)
+        distance_cols.append(col)
+    distances = result[distance_cols].to_numpy(dtype=float)
+    order = np.argsort(distances, axis=1)
+    materials = np.array(dictionary["materials"])
+    result["dict_top1_distance"] = distances[np.arange(len(distances)), order[:, 0]]
+    result["dict_top2_distance"] = distances[np.arange(len(distances)), order[:, 1]] if len(distance_cols) > 1 else np.nan
+    result["dict_distance_margin"] = result["dict_top2_distance"] - result["dict_top1_distance"]
+    result["dict_top1_material"] = materials[order[:, 0]]
+    result["dict_top3_candidates"] = [";".join(materials[row[:3]]) for row in order]
+    return result.replace([np.inf, -np.inf], np.nan).fillna(0.0)
+
+
+def append_dictionary_features(frame: pd.DataFrame, dictionary: dict) -> pd.DataFrame:
+    dist = dictionary_distances(frame, dictionary)
+    numeric_dist = dist.drop(columns=["dict_top1_material", "dict_top3_candidates"], errors="ignore")
+    return pd.concat([frame.reset_index(drop=True), numeric_dist.reset_index(drop=True)], axis=1)
+
+
+def build_sklearn_models(sk) -> dict[str, object]:
+    return {
+        "LogisticRegression": sk["make_pipeline"](
+            sk["StandardScaler"](), sk["LogisticRegression"](max_iter=5000, class_weight="balanced")
+        ),
+        "SVM_RBF": sk["make_pipeline"](
+            sk["StandardScaler"](), sk["SVC"](C=10.0, gamma="scale", probability=True, class_weight="balanced")
+        ),
+        "RandomForest": sk["RandomForestClassifier"](n_estimators=400, random_state=42, n_jobs=-1, class_weight="balanced"),
+        "ExtraTrees": sk["ExtraTreesClassifier"](n_estimators=400, random_state=42, n_jobs=-1, class_weight="balanced"),
+        "HistGradientBoosting": sk["HistGradientBoostingClassifier"](random_state=42),
+        "MLPClassifier": sk["make_pipeline"](
+            sk["StandardScaler"](),
+            sk["MLPClassifier"](hidden_layer_sizes=(96, 48), max_iter=800, random_state=42, early_stopping=True),
+        ),
+    }
+
+
+def score_from_model(model: object, frame: pd.DataFrame, feature_cols: list[str]) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    if isinstance(model, CentroidModel):
+        scores, classes = model.score_matrix(frame)
+        predictions = classes[np.argmax(scores, axis=1)]
+        return predictions, scores, classes
+    x = frame[feature_cols]
+    predictions = model.predict(x)
+    if hasattr(model, "predict_proba"):
+        scores = model.predict_proba(x)
+        classes = np.array(model.classes_)
+    else:
+        classes = np.array(sorted(set(predictions)))
+        scores = np.zeros((len(frame), len(classes)))
+        for idx, pred in enumerate(predictions):
+            scores[idx, np.where(classes == pred)[0][0]] = 1.0
+    return np.asarray(predictions), np.asarray(scores), classes
+
+
+def topk_accuracy(y_true: np.ndarray, scores: np.ndarray, classes: np.ndarray, k: int) -> float:
+    if scores.size == 0:
+        return math.nan
+    order = np.argsort(scores, axis=1)[:, ::-1][:, :k]
+    return float(np.mean([truth in classes[row] for truth, row in zip(y_true, order)]))
+
+
+def evaluate_scores(
+    method: str,
+    frame: pd.DataFrame,
+    predictions: np.ndarray,
+    scores: np.ndarray,
+    classes: np.ndarray,
+    sk,
+) -> dict:
+    labels = np.array(TARGET_MATERIALS)
+    y_true = frame["material"].astype(str).to_numpy()
+    recalls = sk["recall_score"](y_true, predictions, labels=labels, average=None, zero_division=0)
+    return {
+        "method": method,
+        "samples": int(len(frame)),
+        "top1_accuracy": float(np.mean(y_true == predictions)),
+        "top3_accuracy": topk_accuracy(y_true, scores, classes, 3),
+        "macro_f1": float(sk["f1_score"](y_true, predictions, labels=labels, average="macro", zero_division=0)),
+        "min_class_recall": float(np.min(recalls)),
+    }
+
+
+def train_and_score(method: str, train: pd.DataFrame, eval_frame: pd.DataFrame, feature_cols: list[str], sk):
+    if method == "PhysicsDictionaryNN":
+        physics_cols = [
+            col for col in feature_cols
+            if "__A_" in col or "__T_" in col or col.startswith("A_") or col.startswith("T_")
+        ]
+        if len(physics_cols) < 2:
+            physics_cols = feature_cols
+        model = CentroidModel(method, physics_cols, standardize=True).fit(train)
+        return model, *score_from_model(model, eval_frame, physics_cols)
+    if method == "MahalanobisCentroid":
+        model = CentroidModel(method, feature_cols, standardize=True).fit(train)
+        return model, *score_from_model(model, eval_frame, feature_cols)
+    model = build_sklearn_models(sk)[method]
+    model.fit(train[feature_cols], train["material"])
+    return model, *score_from_model(model, eval_frame, feature_cols)
+
+
+def decision_frame(frame: pd.DataFrame, predictions: np.ndarray, scores: np.ndarray, classes: np.ndarray) -> pd.DataFrame:
+    order = np.argsort(scores, axis=1)[:, ::-1]
+    top1_idx = order[:, 0]
+    top2_idx = order[:, 1] if scores.shape[1] > 1 else order[:, 0]
+    top1_score = scores[np.arange(len(scores)), top1_idx]
+    top2_score = scores[np.arange(len(scores)), top2_idx]
+    score_margin = top1_score - top2_score
+    score_is_probability = np.all(scores >= -1e-9) and np.allclose(scores.sum(axis=1), 1.0, atol=1e-3)
+
+    rows = []
+    for idx, (_, sample) in enumerate(frame.reset_index(drop=True).iterrows()):
+        reasons = []
+        if score_is_probability and top1_score[idx] < REVIEW_PROBABILITY_THRESHOLD:
+            reasons.append("low_probability")
+        if score_margin[idx] < REVIEW_MARGIN_THRESHOLD:
+            reasons.append("small_top1_top2_margin")
+        rows.append(
+            {
+                "material": sample["material"],
+                "predicted_material": predictions[idx],
+                "top1_score": float(top1_score[idx]),
+                "top2_score": float(top2_score[idx]),
+                "score_margin": float(score_margin[idx]),
+                "decision": "auto_sort" if not reasons else "review_unknown_or_ambiguous",
+                "review_reason": ";".join(reasons),
+                "top3_candidates": ";".join(classes[order[idx, :3]]),
+                "is_correct": bool(sample["material"] == predictions[idx]),
+                "thickness_mm": float(sample["thickness_mm"]),
+                "random_seed": int(sample["random_seed"]),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def write_csv(frame: pd.DataFrame | pd.Series, path: Path, *, index: bool = False) -> None:
+    frame.to_csv(path, index=index, lineterminator="\n")
+
+
+def write_manifest(path: Path, manifest: dict) -> None:
+    path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2, allow_nan=False) + "\n", encoding="utf-8")
+
+
+def json_energy_edges() -> list[float | str]:
+    return ["inf" if math.isinf(value) else value for value in ENERGY_EDGES]
+
+
+def split_assignment_table(frame: pd.DataFrame) -> pd.DataFrame:
+    split = frame[["material", "thickness_mm", "random_seed", "sample_id"]].copy()
+    split["split"] = np.select(
+        [
+            split["random_seed"].eq(TRAIN_SEED),
+            split["random_seed"].eq(VALIDATION_SEED),
+            split["random_seed"].eq(TEST_SEED),
+        ],
+        ["train", "validation", "test"],
+        default="unused",
+    )
+    return split
+
+
+def leakage_report(feature_cols: list[str], split_table: pd.DataFrame, status: dict) -> dict:
+    exact_violations = sorted(set(feature_cols) & HARD_EXCLUDED_COLUMNS)
+    fragment_violations = sorted(
+        col for col in feature_cols if any(fragment in col for fragment in FORBIDDEN_FEATURE_FRAGMENTS)
+    )
+    train_seed_set = set(split_table.loc[split_table["split"].eq("train"), "random_seed"].astype(int))
+    validation_seed_set = set(split_table.loc[split_table["split"].eq("validation"), "random_seed"].astype(int))
+    test_seed_set = set(split_table.loc[split_table["split"].eq("test"), "random_seed"].astype(int))
+    return {
+        "feature_exact_blocklist_violations": exact_violations,
+        "feature_fragment_blocklist_violations": fragment_violations,
+        "train_seeds": sorted(train_seed_set),
+        "validation_seeds": sorted(validation_seed_set),
+        "test_seeds": sorted(test_seed_set),
+        "test_seed_in_train": TEST_SEED in train_seed_set,
+        "calibration_rows_enter_supervised_table": False,
+        "complete_full_matrix": bool(status["complete_full_matrix"]),
+        "passes_leakage_checks": not exact_violations
+        and not fragment_violations
+        and TEST_SEED not in train_seed_set,
+    }
+
+
+def run_pressure_thickness(frame: pd.DataFrame, feature_cols: list[str], method: str, sk) -> pd.DataFrame:
+    rows = []
+    for thickness in sorted(frame["thickness_mm"].unique()):
+        train = frame[frame["thickness_mm"] != thickness].copy()
+        test = frame[frame["thickness_mm"] == thickness].copy()
+        if train["material"].nunique() < 2 or test.empty:
+            continue
+        dictionary = fit_dictionary(train, feature_cols)
+        train_aug = append_dictionary_features(train, dictionary)
+        test_aug = append_dictionary_features(test, dictionary)
+        aug_cols = numeric_feature_columns(train_aug)
+        _, predictions, scores, classes = train_and_score(method, train_aug, test_aug, aug_cols, sk)
+        metrics = evaluate_scores(method, test_aug, predictions, scores, classes, sk)
+        metrics["holdout_thickness_mm"] = float(thickness)
+        rows.append(metrics)
+    return pd.DataFrame(rows)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Material sorting v2: calibrated fingerprints plus dictionary features.")
+    parser.add_argument("--raw-dir", default="build/material_sorting_runs/full")
+    parser.add_argument("--output-dir", default="results/material_sorting_v2")
+    parser.add_argument("--project-root", default=Path(__file__).resolve().parents[1])
+    parser.add_argument("--allow-incomplete", action="store_true", help="Write diagnostics even when the full matrix is incomplete.")
+    args = parser.parse_args()
+
+    project_root = Path(args.project_root).resolve()
+    raw_dir = project_root / args.raw_dir
+    output_dir = project_root / args.output_dir
+    output_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        raw_dir_label = raw_dir.relative_to(project_root).as_posix()
+    except ValueError:
+        raw_dir_label = str(raw_dir)
+
+    material_records, calibration_records = discover_records(project_root, raw_dir)
+    status = matrix_status(material_records, calibration_records)
+    manifest_base = {
+        "package": "xrt-sorter-geant4-undergrad-guide",
+        "generated_by": "analysis/material_sorting_v2.py",
+        "generated_at_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "raw_dir": raw_dir_label,
+        "protocol": {
+            "name": "material_sorting_v2_seed_holdout",
+            "train_seed": TRAIN_SEED,
+            "validation_seed": VALIDATION_SEED,
+            "test_seed": TEST_SEED,
+            "photons_per_sample": PHOTONS_PER_SAMPLE,
+            "energy_edges_keV": json_energy_edges(),
+            "acceptance_targets": {
+                "top1_accuracy_ge_0_85": 0.85,
+                "macro_f1_ge_0_80": 0.80,
+                "min_class_recall_ge_0_70": 0.70,
+            },
+        },
+        "matrix_status": status,
+        "software": {"python": platform.python_version(), "pandas": pd.__version__},
+    }
+    write_csv(records_inventory(material_records, calibration_records), output_dir / "material_raw_inventory_v2.csv")
+    if not status["complete_full_matrix"] and not args.allow_incomplete:
+        manifest_base["run_status"] = "incomplete_full_matrix"
+        manifest_base["message"] = "Run the 270 material rows plus 9 calibration rows before final evaluation, or use --allow-incomplete for diagnostics."
+        write_manifest(output_dir / "material_sorting_v2_manifest.json", manifest_base)
+        raise SystemExit("Full material sorting matrix is incomplete; wrote manifest only.")
+
+    if not material_records or not calibration_records:
+        manifest_base["run_status"] = "no_material_or_calibration_records"
+        write_manifest(output_dir / "material_sorting_v2_manifest.json", manifest_base)
+        raise SystemExit("No material/calibration records available.")
+
+    calibration = calibration_table(calibration_records)
+    material_samples = pd.concat([aggregate_run(record) for record in material_records], ignore_index=True)
+    calibrated = apply_calibration(material_samples, calibration)
+    fused, table_mode = fuse_sources(calibrated)
+    base_feature_cols = numeric_feature_columns(fused)
+    write_csv(calibrated, output_dir / "material_fingerprint_samples_long.csv")
+    write_csv(calibrated, output_dir / "material_samples_long_v2.csv")
+    write_csv(fused, output_dir / "material_fingerprint_model_table.csv")
+    write_csv(fused, output_dir / "material_model_table_v2.csv")
+    write_csv(pd.Series(base_feature_cols, name="feature"), output_dir / "base_feature_columns.csv")
+    write_csv(pd.Series(base_feature_cols, name="feature"), output_dir / "material_feature_columns_v2.csv")
+    write_csv(pd.Series(sorted(HARD_EXCLUDED_COLUMNS), name="excluded_column"), output_dir / "material_excluded_columns_v2.csv")
+    write_csv(calibration, output_dir / "calibration_i0_table.csv")
+    split_table = split_assignment_table(fused)
+    write_csv(split_table, output_dir / "material_seed_split_assignments_v2.csv")
+    write_manifest(output_dir / "material_leakage_report_v2.json", leakage_report(base_feature_cols, split_table, status))
+
+    train, validation, test = split_frames(fused)
+    if train["material"].nunique() < 2 or validation["material"].nunique() < 2 or test["material"].nunique() < 2:
+        manifest_base.update(
+            {
+                "run_status": "diagnostic_only_not_enough_classes_or_seed_splits",
+                "table_mode": table_mode,
+                "sample_rows": len(fused),
+                "split_rows": {"train": len(train), "validation": len(validation), "test": len(test)},
+                "feature_count": len(base_feature_cols),
+            }
+        )
+        write_manifest(output_dir / "material_sorting_v2_manifest.json", manifest_base)
+        print("Wrote fingerprint diagnostics; not enough classes or seed splits for model evaluation.")
+        return
+
+    sk = require_sklearn()
+    dev_dictionary = fit_dictionary(train, base_feature_cols)
+    write_manifest(output_dir / "material_dictionary_dev_train.json", dev_dictionary)
+    dev_train = append_dictionary_features(train, dev_dictionary)
+    dev_validation = append_dictionary_features(validation, dev_dictionary)
+    dev_feature_cols = numeric_feature_columns(dev_train)
+    write_csv(pd.Series(dev_feature_cols, name="feature"), output_dir / "model_feature_columns.csv")
+
+    methods = [
+        "PhysicsDictionaryNN",
+        "MahalanobisCentroid",
+        "LogisticRegression",
+        "SVM_RBF",
+        "RandomForest",
+        "ExtraTrees",
+        "HistGradientBoosting",
+        "MLPClassifier",
+    ]
+    validation_rows = []
+    for method in methods:
+        _, predictions, scores, classes = train_and_score(method, dev_train, dev_validation, dev_feature_cols, sk)
+        validation_rows.append(evaluate_scores(method, dev_validation, predictions, scores, classes, sk))
+    validation_summary = pd.DataFrame(validation_rows).sort_values(
+        ["macro_f1", "top1_accuracy", "min_class_recall"], ascending=[False, False, False]
+    )
+    selected_method = str(validation_summary.iloc[0]["method"])
+    write_csv(validation_summary, output_dir / "model_selection_validation.csv")
+    write_csv(validation_summary, output_dir / "material_model_summary_v2.csv")
+
+    final_train = pd.concat([train, validation], ignore_index=True)
+    final_dictionary = fit_dictionary(final_train, base_feature_cols)
+    write_manifest(output_dir / "material_dictionary.json", final_dictionary)
+    dictionary_table = pd.DataFrame(
+        [
+            {
+                "material": material,
+                "n_samples": final_dictionary["prototypes"][material]["n_samples"],
+            }
+            for material in final_dictionary["materials"]
+        ]
+    )
+    write_csv(dictionary_table, output_dir / "material_dictionary.csv")
+    write_csv(dictionary_table, output_dir / "material_dictionary_v2.csv")
+
+    final_train_aug = append_dictionary_features(final_train, final_dictionary)
+    final_test_aug = append_dictionary_features(test, final_dictionary)
+    final_feature_cols = numeric_feature_columns(final_train_aug)
+    model, predictions, scores, classes = train_and_score(selected_method, final_train_aug, final_test_aug, final_feature_cols, sk)
+    final_metrics = evaluate_scores(selected_method, final_test_aug, predictions, scores, classes, sk)
+    final_summary = pd.DataFrame([final_metrics])
+    write_csv(final_summary, output_dir / "final_test_summary.csv")
+
+    decisions = decision_frame(final_test_aug, predictions, scores, classes)
+    write_csv(decisions, output_dir / "final_test_decisions.csv")
+    labels = np.array(TARGET_MATERIALS)
+    cm = pd.DataFrame(
+        sk["confusion_matrix"](final_test_aug["material"].astype(str), predictions, labels=labels),
+        index=labels,
+        columns=labels,
+    )
+    write_csv(cm, output_dir / f"final_test_confusion_{selected_method}.csv", index=True)
+    pressure = run_pressure_thickness(fused, base_feature_cols, selected_method, sk)
+    write_csv(pressure, output_dir / "pressure_leave_one_thickness_out.csv")
+
+    auto = decisions[decisions["decision"] == "auto_sort"]
+    auto_precision = float(auto["is_correct"].mean()) if len(auto) else 0.0
+    review_rate = float((decisions["decision"] != "auto_sort").mean())
+    acceptance = {
+        "selected_method": selected_method,
+        "final_test_metrics": final_metrics,
+        "auto_sort_precision": auto_precision,
+        "review_rate": review_rate,
+        "criteria": {
+            "top1_accuracy_ge_0_85": final_metrics["top1_accuracy"] >= 0.85,
+            "macro_f1_ge_0_80": final_metrics["macro_f1"] >= 0.80,
+            "min_class_recall_ge_0_70": final_metrics["min_class_recall"] >= 0.70,
+        },
+    }
+    acceptance["all_criteria_met"] = all(acceptance["criteria"].values())
+    if acceptance["all_criteria_met"]:
+        stage_conclusion = "automatic_ten_material_sorting_candidate"
+    elif final_metrics["top3_accuracy"] >= 0.95:
+        stage_conclusion = "top_k_dictionary_retrieval_with_review"
+    else:
+        stage_conclusion = "diagnostic_only_not_ready"
+
+    manifest_base.update(
+        {
+            "run_status": "completed_evaluation",
+            "table_mode": table_mode,
+            "sample_rows": len(fused),
+            "split_rows": {"train": len(train), "validation": len(validation), "test": len(test)},
+            "final_train_rows": len(final_train),
+            "base_feature_count": len(base_feature_cols),
+            "model_feature_count": len(final_feature_cols),
+            "selected_by_validation": selected_method,
+            "acceptance_status": acceptance,
+            "stage_conclusion": stage_conclusion,
+            "claim_boundary": [
+                "The final test seed is never used for model selection or dictionary fitting before final evaluation.",
+                "If acceptance criteria fail, this package must not claim complete ten-material automatic sorting.",
+                "Dictionary distance features are fitted only from training or training+validation rows.",
+            ],
+        }
+    )
+    write_manifest(output_dir / "material_sorting_v2_manifest.json", manifest_base)
+    print(final_summary.to_string(index=False))
+    print(f"selected_method={selected_method}")
+    print(f"stage_conclusion={stage_conclusion}")
+
+
+if __name__ == "__main__":
+    main()
