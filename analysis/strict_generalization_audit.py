@@ -30,9 +30,9 @@ DEFAULT_METHODS = [
 ]
 HM_PAIR = ["Hematite", "Magnetite"]
 ACCEPTANCE_TARGETS = {
-    "top1_accuracy": 0.85,
-    "macro_f1": 0.80,
-    "min_class_recall": 0.70,
+    "top1_accuracy": 0.88,
+    "macro_f1": 0.84,
+    "min_class_recall": 0.75,
 }
 
 
@@ -989,7 +989,7 @@ def main() -> None:
     parser.add_argument("--test-seeds", default="505")
     parser.add_argument("--burned-test-seeds", default="303,505")
     parser.add_argument("--methods", default=",".join(DEFAULT_METHODS))
-    parser.add_argument("--min-class-support", type=int, default=30)
+    parser.add_argument("--min-class-support", type=int, default=40)
     parser.add_argument("--rotate-existing-seeds", action="store_true")
     parser.add_argument(
         "--development-only",
