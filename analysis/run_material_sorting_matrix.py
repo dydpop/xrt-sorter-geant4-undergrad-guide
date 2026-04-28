@@ -69,12 +69,30 @@ def load_completed_status(rows: list[dict[str, str]]) -> set[tuple[str, str, str
     return completed
 
 
+def status_key(row: dict[str, str]) -> tuple[str, str, str, str, str]:
+    return (
+        row.get("run_role", "material"),
+        row.get("material", ""),
+        row.get("source_id", ""),
+        row.get("thickness_mm", ""),
+        row.get("random_seed", ""),
+    )
+
+
 def write_status_rows(path: Path, rows: list[dict[str, str]]) -> None:
+    latest: dict[tuple[str, str, str, str, str], dict[str, str]] = {}
+    key_order: list[tuple[str, str, str, str, str]] = []
+    for row in rows:
+        normalized = normalize_status_row(row)
+        key = status_key(normalized)
+        if key not in latest:
+            key_order.append(key)
+        latest[key] = normalized
     tmp_path = path.with_suffix(path.suffix + ".tmp")
     with tmp_path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=STATUS_FIELDS, lineterminator="\n")
         writer.writeheader()
-        writer.writerows([normalize_status_row(row) for row in rows])
+        writer.writerows([latest[key] for key in key_order])
     os.replace(tmp_path, path)
 
 
