@@ -1,0 +1,140 @@
+{
+  "generated_by": "analysis/material_sorting_selected_rebuild.py",
+  "purpose": "endogenous material dictionary talker for undergraduate ten-material rebuild",
+  "scope": "uses only repo material catalog, selected rebuild simulation fingerprints, validation/final decisions, and confusion evidence",
+  "entries": [
+    {
+      "material": "Albite",
+      "group_label": "low_absorption",
+      "train_samples": 120,
+      "test_samples": 30,
+      "test_top1_accuracy": 0.8,
+      "top3_contains_true_rate": 1.0,
+      "mean_score_margin": 0.838590587753744,
+      "common_confusions": {
+        "Quartz": 6
+      },
+      "talker_summary": "Albite: group=low_absorption; test_top1=0.800; main_confusions={'Quartz': 6}"
+    },
+    {
+      "material": "Calcite",
+      "group_label": "low_absorption",
+      "train_samples": 120,
+      "test_samples": 30,
+      "test_top1_accuracy": 1.0,
+      "top3_contains_true_rate": 1.0,
+      "mean_score_margin": 0.9998153141334915,
+      "common_confusions": {},
+      "talker_summary": "Calcite: group=low_absorption; test_top1=1.000; main_confusions=none"
+    },
+    {
+      "material": "Chalcopyrite",
+      "group_label": "high_absorption",
+      "train_samples": 120,
+      "test_samples": 30,
+      "test_top1_accuracy": 0.7,
+      "top3_contains_true_rate": 0.9666666666666667,
+      "mean_score_margin": 0.9016297268281026,
+      "common_confusions": {
+        "Pyrite": 8,
+        "Magnetite": 1
+      },
+      "talker_summary": "Chalcopyrite: group=high_absorption; test_top1=0.700; main_confusions={'Pyrite': 8, 'Magnetite': 1}"
+    },
+    {
+      "material": "Dolomite",
+      "group_label": "low_absorption",
+      "train_samples": 120,
+      "test_samples": 30,
+      "test_top1_accuracy": 0.9666666666666667,
+      "top3_contains_true_rate": 1.0,
+      "mean_score_margin": 0.9692457432706767,
+      "common_confusions": {
+        "Orthoclase": 1
+      },
+      "talker_summary": "Dolomite: group=low_absorption; test_top1=0.967; main_confusions={'Orthoclase': 1}"
+    },
+    {
+      "material": "Galena",
+      "group_label": "high_absorption",
+      "train_samples": 120,
+      "test_samples": 30,
+      "test_top1_accuracy": 1.0,
+      "top3_contains_true_rate": 1.0,
+      "mean_score_margin": 0.9999793498654933,
+      "common_confusions": {},
+      "talker_summary": "Galena: group=high_absorption; test_top1=1.000; main_confusions=none"
+    },
+    {
+      "material": "Hematite",
+      "group_label": "high_absorption",
+      "train_samples": 120,
+      "test_samples": 30,
+      "test_top1_accuracy": 0.2,
+      "top3_contains_true_rate": 0.9666666666666667,
+      "mean_score_margin": 0.7885179404975503,
+      "common_confusions": {
+        "Magnetite": 19,
+        "Pyrite": 3,
+        "Chalcopyrite": 2
+      },
+      "talker_summary": "Hematite: group=high_absorption; test_top1=0.200; main_confusions={'Magnetite': 19, 'Pyrite': 3, 'Chalcopyrite': 2}"
+    },
+    {
+      "material": "Magnetite",
+      "group_label": "high_absorption",
+      "train_samples": 120,
+      "test_samples": 30,
+      "test_top1_accuracy": 0.5333333333333333,
+      "top3_contains_true_rate": 1.0,
+      "mean_score_margin": 0.7834431261955488,
+      "common_confusions": {
+        "Hematite": 9,
+        "Chalcopyrite": 3,
+        "Pyrite": 2
+      },
+      "talker_summary": "Magnetite: group=high_absorption; test_top1=0.533; main_confusions={'Hematite': 9, 'Chalcopyrite': 3, 'Pyrite': 2}"
+    },
+    {
+      "material": "Orthoclase",
+      "group_label": "low_absorption",
+      "train_samples": 120,
+      "test_samples": 30,
+      "test_top1_accuracy": 0.9,
+      "top3_contains_true_rate": 1.0,
+      "mean_score_margin": 0.8971250401526003,
+      "common_confusions": {
+        "Dolomite": 3
+      },
+      "talker_summary": "Orthoclase: group=low_absorption; test_top1=0.900; main_confusions={'Dolomite': 3}"
+    },
+    {
+      "material": "Pyrite",
+      "group_label": "high_absorption",
+      "train_samples": 120,
+      "test_samples": 30,
+      "test_top1_accuracy": 0.8666666666666667,
+      "top3_contains_true_rate": 1.0,
+      "mean_score_margin": 0.9242510395344451,
+      "common_confusions": {
+        "Chalcopyrite": 3,
+        "Magnetite": 1
+      },
+      "talker_summary": "Pyrite: group=high_absorption; test_top1=0.867; main_confusions={'Chalcopyrite': 3, 'Magnetite': 1}"
+    },
+    {
+      "material": "Quartz",
+      "group_label": "low_absorption",
+      "train_samples": 120,
+      "test_samples": 30,
+      "test_top1_accuracy": 0.7,
+      "top3_contains_true_rate": 1.0,
+      "mean_score_margin": 0.8948231184324771,
+      "common_confusions": {
+        "Albite": 8,
+        "Orthoclase": 1
+      },
+      "talker_summary": "Quartz: group=low_absorption; test_top1=0.700; main_confusions={'Albite': 8, 'Orthoclase': 1}"
+    }
+  ]
+}

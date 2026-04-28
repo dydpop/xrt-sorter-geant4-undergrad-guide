@@ -1,0 +1,2 @@
+method,samples,top1_accuracy,top3_accuracy,macro_f1,min_class_recall,gpu_status
+XGBoostGPU,600,0.7216666666666667,0.985,0.71837377616529,0.31666666666666665,cuda_requested

@@ -23,6 +23,14 @@ STATUS_FIELDS = [
 ]
 
 
+def infer_macro_profile(profile: str) -> str:
+    if profile.startswith("selected_rebuild"):
+        return "selected_rebuild"
+    if profile.startswith("energy_scan"):
+        return "energy_scan"
+    return profile
+
+
 def load_rows(path: Path) -> list[dict[str, str]]:
     with path.open(encoding="utf-8") as f:
         return list(csv.DictReader(f))
@@ -70,7 +78,12 @@ def write_status_rows(path: Path, rows: list[dict[str, str]]) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run generated Geant4 material sorting configs.")
-    parser.add_argument("--profile", choices=["pilot", "full"], default="pilot")
+    parser.add_argument("--profile", default="pilot", help="Matrix profile directory to run.")
+    parser.add_argument(
+        "--macro-profile",
+        default="",
+        help="Macro profile to reuse for profile aliases. Defaults to selected_rebuild for selected_rebuild_* aliases.",
+    )
     parser.add_argument("--limit", type=int, default=0, help="Optional number of matrix rows to run.")
     parser.add_argument("--start", type=int, default=0, help="Start row offset for resumable batches.")
     parser.add_argument("--role", choices=["all", "calibration", "material"], default="all")
@@ -95,7 +108,8 @@ def main() -> None:
 
     build_dir = project_root / "build"
     exe = build_dir / "xrt_sorter"
-    macro = project_root / "analysis" / "configs" / f"run_material_sorting_{args.profile}.mac"
+    macro_profile = args.macro_profile.strip() or infer_macro_profile(args.profile)
+    macro = project_root / "analysis" / "configs" / f"run_material_sorting_{macro_profile}.mac"
     if not exe.exists():
         raise FileNotFoundError(f"Missing executable: {exe}. Run cmake --build build first.")
     if not macro.exists():

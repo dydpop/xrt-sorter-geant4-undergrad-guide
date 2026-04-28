@@ -22,7 +22,48 @@ SOURCES = [
         "spectrum_file": "../../../spectra/w_target_120kV_1mmAl.csv",
     },
 ]
-PROFILE_EVENTS = {"pilot": 2000, "full": 10000}
+ENERGY_SCAN_SOURCES = [
+    {"source_id": f"mono_{energy}kev", "source_mode": "mono", "mono_energy_keV": float(energy)}
+    for energy in [30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 150, 200]
+]
+SELECTED_REBUILD_SOURCE_IDS = ["mono_40kev", "mono_50kev", "mono_120kev"]
+PROFILE_EVENTS = {
+    "pilot": 2000,
+    "energy_scan": 5000,
+    "full": 10000,
+    "selected_rebuild": 10000,
+}
+
+
+def source_lookup() -> dict[str, dict]:
+    return {source["source_id"]: source for source in [*SOURCES, *ENERGY_SCAN_SOURCES]}
+
+
+def profile_thicknesses(profile: str) -> list[float]:
+    if profile == "energy_scan":
+        return [10.0]
+    return THICKNESS_MM
+
+
+def profile_seeds(profile: str) -> list[int]:
+    if profile == "energy_scan":
+        return [101, 202]
+    if profile == "selected_rebuild":
+        return [101, 202, 303, 404, 505]
+    return SEEDS
+
+
+def profile_sources(profile: str, selected_source_ids: list[str] | None = None) -> list[dict]:
+    if profile == "energy_scan":
+        return ENERGY_SCAN_SOURCES
+    if profile == "selected_rebuild":
+        lookup = source_lookup()
+        source_ids = selected_source_ids or SELECTED_REBUILD_SOURCE_IDS
+        missing = [source_id for source_id in source_ids if source_id not in lookup]
+        if missing:
+            raise ValueError(f"Unknown selected source ids: {missing}")
+        return [lookup[source_id] for source_id in source_ids]
+    return SOURCES
 
 
 @dataclass(frozen=True)
@@ -127,19 +168,30 @@ envelope_z_cm = 30.0
 """
 
 
-def build_matrix(project_root: Path, profile: str) -> list[MatrixRun]:
+def build_matrix(
+    project_root: Path,
+    profile: str,
+    selected_source_ids: list[str] | None = None,
+    profile_alias: str | None = None,
+    seed_list: list[int] | None = None,
+    events_per_run: int | None = None,
+) -> list[MatrixRun]:
     materials = load_materials(project_root)
-    expected_events = PROFILE_EVENTS[profile]
-    out_dir = OUTPUT_ROOT / profile
-    raw_output_dir = f"material_sorting_runs/{profile}"
+    profile_name = profile_alias or profile
+    expected_events = events_per_run or PROFILE_EVENTS[profile]
+    out_dir = OUTPUT_ROOT / profile_name
+    raw_output_dir = f"material_sorting_runs/{profile_name}"
     runs: list[MatrixRun] = []
-    for source in SOURCES:
-        for seed in SEEDS:
-            output_prefix = f"ms_{profile}_calibration_{source['source_id']}_seed{seed}"
+    sources = profile_sources(profile, selected_source_ids)
+    thicknesses = profile_thicknesses(profile)
+    seeds = seed_list or profile_seeds(profile)
+    for source in sources:
+        for seed in seeds:
+            output_prefix = f"ms_{profile_name}_calibration_{source['source_id']}_seed{seed}"
             config_path = out_dir / f"{output_prefix}.txt"
             runs.append(
                 MatrixRun(
-                    profile=profile,
+                    profile=profile_name,
                     run_role="calibration",
                     material_name="AIR_PATH",
                     material_slug="calibration",
@@ -156,17 +208,17 @@ def build_matrix(project_root: Path, profile: str) -> list[MatrixRun]:
             )
     for row in materials.itertuples(index=False):
         material_slug = slugify(str(row.material_name))
-        for thickness in THICKNESS_MM:
-            for source in SOURCES:
-                for seed in SEEDS:
+        for thickness in thicknesses:
+            for source in sources:
+                for seed in seeds:
                     output_prefix = (
-                        f"ms_{profile}_{material_slug}_{source['source_id']}_"
+                        f"ms_{profile_name}_{material_slug}_{source['source_id']}_"
                         f"{int(thickness)}mm_seed{seed}"
                     )
                     config_path = out_dir / f"{output_prefix}.txt"
                     runs.append(
                         MatrixRun(
-                            profile=profile,
+                            profile=profile_name,
                             run_role="material",
                             material_name=str(row.material_name),
                             material_slug=material_slug,
@@ -184,13 +236,28 @@ def build_matrix(project_root: Path, profile: str) -> list[MatrixRun]:
     return runs
 
 
-def write_matrix(project_root: Path, profile: str) -> Path:
-    runs = build_matrix(project_root, profile)
-    out_dir = project_root / OUTPUT_ROOT / profile
+def parse_int_list(value: str) -> list[int]:
+    return [int(item.strip()) for item in value.split(",") if item.strip()]
+
+
+def write_matrix(
+    project_root: Path,
+    profile: str,
+    selected_source_ids: list[str] | None = None,
+    profile_alias: str | None = None,
+    seed_list: list[int] | None = None,
+    events_per_run: int | None = None,
+) -> Path:
+    profile_name = profile_alias or profile
+    runs = build_matrix(project_root, profile, selected_source_ids, profile_name, seed_list, events_per_run)
+    out_dir = project_root / OUTPUT_ROOT / profile_name
     out_dir.mkdir(parents=True, exist_ok=True)
 
     rows = []
-    by_key = {(source["source_id"], source["source_mode"]): source for source in SOURCES}
+    by_key = {
+        (source["source_id"], source["source_mode"]): source
+        for source in profile_sources(profile, selected_source_ids)
+    }
     for run in runs:
         source = by_key[(run.source_id, run.source_mode)]
         with (project_root / run.config_path).open("w", encoding="utf-8", newline="\n") as f:
@@ -223,15 +290,57 @@ def write_matrix(project_root: Path, profile: str) -> Path:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate material-level sorting configs.")
     parser.add_argument("--profile", choices=sorted(PROFILE_EVENTS), default="pilot")
+    parser.add_argument(
+        "--selected-source-ids",
+        default=",".join(SELECTED_REBUILD_SOURCE_IDS),
+        help="Comma-separated source ids for selected_rebuild; ignored by other profiles.",
+    )
+    parser.add_argument(
+        "--profile-alias",
+        default="",
+        help="Output profile name. Use this for locked reruns such as selected_rebuild_r2 without overwriting prior evidence.",
+    )
+    parser.add_argument(
+        "--seed-list",
+        default="",
+        help="Comma-separated random seeds. Defaults to the selected profile's standard seeds.",
+    )
+    parser.add_argument(
+        "--events-per-run",
+        type=int,
+        default=0,
+        help="Override macro/event expectation recorded in the matrix. The runner macro must still beamOn the same count.",
+    )
     parser.add_argument("--project-root", default=Path(__file__).resolve().parents[1])
     args = parser.parse_args()
 
     project_root = Path(args.project_root).resolve()
-    matrix_path = write_matrix(project_root, args.profile)
+    profile_alias = args.profile_alias.strip() or None
+    seed_list = parse_int_list(args.seed_list) if args.seed_list.strip() else None
+    events_per_run = args.events_per_run or None
+    selected_source_ids = [
+        item.strip() for item in str(args.selected_source_ids).split(",") if item.strip()
+    ]
+    matrix_path = write_matrix(
+        project_root,
+        args.profile,
+        selected_source_ids if args.profile == "selected_rebuild" else None,
+        profile_alias=profile_alias,
+        seed_list=seed_list,
+        events_per_run=events_per_run,
+    )
     runs = list(csv.DictReader(matrix_path.open(encoding="utf-8")))
-    print(f"Wrote {len(runs)} {args.profile} configs to {matrix_path}")
-    print("Expected material matrix: 10 materials x 3 thicknesses x 3 sources x 3 seeds = 270 runs")
-    print("Expected calibration matrix: 3 sources x 3 seeds = 9 runs")
+    profile_name = profile_alias or args.profile
+    print(f"Wrote {len(runs)} {profile_name} configs to {matrix_path}")
+    sources = profile_sources(args.profile, selected_source_ids if args.profile == "selected_rebuild" else None)
+    thicknesses = profile_thicknesses(args.profile)
+    seeds = seed_list or profile_seeds(args.profile)
+    print(
+        "Expected material matrix: "
+        f"10 materials x {len(thicknesses)} thicknesses x {len(sources)} sources x {len(seeds)} seeds "
+        f"= {10 * len(thicknesses) * len(sources) * len(seeds)} runs"
+    )
+    print(f"Expected calibration matrix: {len(sources)} sources x {len(seeds)} seeds = {len(sources) * len(seeds)} runs")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,2 @@
+method,samples,top1_accuracy,top3_accuracy,macro_f1,min_class_recall
+ExtraTrees,60,0.9,1.0,0.8993006993006993,0.5

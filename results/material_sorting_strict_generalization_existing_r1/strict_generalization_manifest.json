@@ -1,0 +1,104 @@
+{
+  "package": "xrt-sorter-geant4-undergrad-guide",
+  "generated_by": "analysis/strict_generalization_audit.py",
+  "generated_at_utc": "2026-04-28T05:09:25+00:00",
+  "protocol_name": "strict_generalization_seed_holdout",
+  "raw_dir": "build/material_sorting_runs/selected_rebuild",
+  "output_dir": "results/material_sorting_strict_generalization_existing_r1",
+  "photon_budget": 5000,
+  "train_seeds": [
+    101,
+    202,
+    303
+  ],
+  "validation_seeds": [
+    404
+  ],
+  "test_seeds": [
+    505
+  ],
+  "burned_test_seeds": [
+    303,
+    505
+  ],
+  "unseen_test_seeds": [],
+  "reused_test_seeds": [
+    505
+  ],
+  "split_integrity": {
+    "train_validation_overlap": [],
+    "train_test_overlap": [],
+    "validation_test_overlap": [],
+    "split_is_disjoint": true
+  },
+  "methods": [
+    "ExtraTrees",
+    "HistGradientBoosting",
+    "HierarchicalExtraTrees",
+    "XGBoostGPU"
+  ],
+  "model_selection_policy": "validation-only: rank by min_class_recall, then top1_accuracy, then macro_f1",
+  "selected_method": "ExtraTrees",
+  "status": {
+    "material_metadata_found": 450,
+    "calibration_metadata_found": 15,
+    "materials_found": [
+      "Albite",
+      "Calcite",
+      "Chalcopyrite",
+      "Dolomite",
+      "Galena",
+      "Hematite",
+      "Magnetite",
+      "Orthoclase",
+      "Pyrite",
+      "Quartz"
+    ],
+    "sources_found": [
+      "mono_120kev",
+      "mono_40kev",
+      "mono_50kev"
+    ],
+    "thicknesses_found": [
+      5.0,
+      10.0,
+      20.0
+    ],
+    "seeds_found": [
+      101,
+      202,
+      303,
+      404,
+      505
+    ],
+    "missing_material_runs": 0,
+    "missing_calibration_runs": 0,
+    "complete_selected_rebuild_matrix": true,
+    "table_mode": "multi_source_fused",
+    "rows": 300
+  },
+  "acceptance_targets": {
+    "top1_accuracy": 0.85,
+    "macro_f1": 0.8,
+    "min_class_recall": 0.7
+  },
+  "min_class_support_required": 30,
+  "min_class_support_observed": 6,
+  "final_test_metrics": {
+    "method": "ExtraTrees",
+    "samples": 60,
+    "top1_accuracy": 0.9,
+    "top3_accuracy": 1.0,
+    "macro_f1": 0.8993006993006993,
+    "min_class_recall": 0.5
+  },
+  "passes_metric_targets": false,
+  "passes_support_target": false,
+  "claim_safe_automatic_ten_material_sorting": false,
+  "stage_conclusion": "diagnostic_or_failed_not_claim_safe",
+  "rotation_summary_rows": 0,
+  "software": {
+    "python": "3.12.13",
+    "pandas": "3.0.1"
+  }
+}

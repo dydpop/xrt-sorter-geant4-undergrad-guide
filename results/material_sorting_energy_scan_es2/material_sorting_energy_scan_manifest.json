@@ -1,0 +1,56 @@
+{
+  "package": "xrt-sorter-geant4-undergrad-guide",
+  "generated_by": "analysis/material_sorting_energy_scan.py",
+  "generated_at_utc": "2026-04-28T06:27:23+00:00",
+  "raw_dir": "build/material_sorting_runs/es2",
+  "output_dir": "results/material_sorting_energy_scan_es2",
+  "photon_budgets": [
+    1000
+  ],
+  "max_source_count": 3,
+  "include_gpu": true,
+  "best_validation_result": {
+    "method": "ExtraTrees",
+    "samples": 50,
+    "top1_accuracy": 0.88,
+    "top3_accuracy": 1.0,
+    "macro_f1": 0.8787878787878787,
+    "min_class_recall": 0.4,
+    "photons_per_sample": 1000,
+    "source_subset": "mono_40kev;mono_70kev;mono_200kev",
+    "source_count": 3,
+    "feature_table_rows": 100,
+    "table_mode": "filtered_energy_scan_fused",
+    "gpu_status": null
+  },
+  "selected_validation_result": {
+    "method": "ExtraTrees",
+    "samples": 50,
+    "top1_accuracy": 0.88,
+    "top3_accuracy": 0.98,
+    "macro_f1": 0.8767676767676769,
+    "min_class_recall": 0.6,
+    "photons_per_sample": 1000,
+    "source_subset": "mono_40kev;mono_110kev;mono_200kev",
+    "source_count": 3,
+    "feature_table_rows": 100,
+    "table_mode": "filtered_energy_scan_fused",
+    "gpu_status": null
+  },
+  "selection_policy": "rank by min_class_recall, then top1_accuracy, then macro_f1; this avoids repeating the v2 failure mode where mean accuracy improved while one class collapsed",
+  "recommended_selected_source_ids": [
+    "mono_40kev",
+    "mono_110kev",
+    "mono_200kev"
+  ],
+  "acceptance_targets": {
+    "top1_accuracy": 0.85,
+    "macro_f1": 0.8,
+    "min_class_recall": 0.7
+  },
+  "stage_conclusion": "energy_screening_only_requires_selected_rebuild_test_seed",
+  "software": {
+    "python": "3.12.13",
+    "pandas": "3.0.1"
+  }
+}

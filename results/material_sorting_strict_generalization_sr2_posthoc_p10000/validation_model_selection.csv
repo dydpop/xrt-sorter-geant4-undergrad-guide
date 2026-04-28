@@ -1,0 +1,4 @@
+method,samples,top1_accuracy,top3_accuracy,macro_f1,min_class_recall
+ExtraTrees,30,0.9333333333333333,1.0,0.9333333333333332,0.6666666666666666
+HierarchicalExtraTrees,30,0.9,1.0,0.8971428571428571,0.3333333333333333
+HematiteMagnetiteRecallExtraTrees,30,0.9,1.0,0.8971428571428571,0.3333333333333333

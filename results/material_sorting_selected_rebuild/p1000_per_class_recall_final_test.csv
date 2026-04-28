@@ -1,0 +1,11 @@
+split,material,support,recall
+test,Quartz,30,0.7
+test,Calcite,30,1.0
+test,Orthoclase,30,0.9
+test,Albite,30,0.8
+test,Dolomite,30,0.9666666666666667
+test,Pyrite,30,0.8666666666666667
+test,Hematite,30,0.2
+test,Magnetite,30,0.5333333333333333
+test,Chalcopyrite,30,0.7
+test,Galena,30,1.0

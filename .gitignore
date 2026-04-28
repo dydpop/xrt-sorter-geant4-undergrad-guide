@@ -18,3 +18,4 @@ results/material_sorting_v2/material_fingerprint_model_table.csv
 results/material_sorting_v2/material_fingerprint_samples_long.csv
 results/material_sorting_v2/material_model_table_v2.csv
 results/material_sorting_v2/material_samples_long_v2.csv
+results/material_sorting/failed_*.log

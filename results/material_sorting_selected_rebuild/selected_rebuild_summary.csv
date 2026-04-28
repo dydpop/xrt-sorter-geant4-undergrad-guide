@@ -1,0 +1,2 @@
+photons_per_sample,selected_method,validation_top1_accuracy,validation_macro_f1,validation_min_class_recall,final_top1_accuracy,final_top3_accuracy,final_macro_f1,final_min_class_recall,passes_all_acceptance_targets
+5000,ExtraTrees,0.8666666666666667,0.8627505827505828,0.5,0.9,1.0,0.8993006993006993,0.5,False

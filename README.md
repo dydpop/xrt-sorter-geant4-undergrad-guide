@@ -30,6 +30,7 @@
 | 想核对结果数字 | `results/undergrad_validation/validation_manifest.json` |
 | 想看十材料物种级分选是否成立 | `docs/MATERIAL_LEVEL_SORTING_DIAGNOSTIC_zh.md` |
 | 想继续推进十材料 v2 物化指纹/字典路线 | `docs/MATERIAL_SORTING_V2_PROTOCOL_zh.md` |
+| 想看最新严格泛化复核 | `docs/STRICT_GENERALIZATION_REVIEW_zh.md` |
 | 想看最终边界复核 | `docs/FINAL_ELEMENTARY_REVIEW_zh.md` |
 
 ## 数据链路
@@ -66,7 +67,9 @@ flowchart LR
 
 这说明当前 `0.9960` 只能作为低/高吸收组二分类结果引用，不能改写成十材料物种识别准确率。材料级实验骨架已经具备：`random_seed` 配置、pilot/full 矩阵、批量运行脚本、top-3 候选、置信度复核和开放集检查；但完整 270-run pilot/full 矩阵尚未完成，因此材料级分选目前只能作为下一阶段方向。详见 `docs/MATERIAL_LEVEL_SORTING_DIAGNOSTIC_zh.md`。
 
-仓库现在还新增了 v2 协议底座：`air_path` 空束校准、279-run 矩阵（270 个材料 run + 9 个校准 run）、可恢复 runner、校准后的多能谱物化指纹、材料字典距离特征和严格 seed 留出评估脚本 `analysis/material_sorting_v2.py`。v2 在 full 矩阵未完成时不会回退旧数据，也不会输出十材料成功指标。详见 `docs/MATERIAL_SORTING_V2_PROTOCOL_zh.md`。
+仓库现在还新增了 v2 协议底座：`air_path` 空束校准、279-run 矩阵（270 个材料 run + 9 个校准 run）、可恢复 runner、校准后的多能谱物化指纹、材料字典距离特征和严格 seed 留出评估脚本 `analysis/material_sorting_v2.py`。v2 full matrix 已经完成，但正式结果仍是负结果：Top-1 `0.3813`、macro-F1 `0.3153`、最低单类召回 `0.0`。
+
+后续 selected rebuild、GPU XGBoost 候选、`sr2` 独立新 seed final test 和 `es2` 扩展能量扫描也已经完成复核。`sr2` 在每类 final test support `30` 的条件下达到 Top-1 `0.88`、macro-F1 `0.8789`，但 Hematite 召回 `0.5`、Magnetite 召回 `0.6333`，仍未通过最低单类召回门槛。详见 `docs/MATERIAL_SORTING_V2_PROTOCOL_zh.md` 和 `docs/STRICT_GENERALIZATION_REVIEW_zh.md`。
 
 ## 快速运行
 

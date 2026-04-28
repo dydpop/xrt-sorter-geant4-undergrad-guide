@@ -1,0 +1,2 @@
+material_metadata_found,calibration_metadata_found,materials_found,sources_found,seeds_found,photons_per_sample,table_mode,rows
+240,24,Albite;Calcite;Chalcopyrite;Dolomite;Galena;Hematite;Magnetite;Orthoclase;Pyrite;Quartz,mono_100kev;mono_110kev;mono_120kev;mono_150kev;mono_200kev;mono_30kev;mono_40kev;mono_50kev;mono_60kev;mono_70kev;mono_80kev;mono_90kev,101;202,1000,multi_source_fused,100

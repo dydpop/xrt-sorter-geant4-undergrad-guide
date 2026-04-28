@@ -118,3 +118,24 @@ v2 主要输出：
 validation 上选出的 review 阈值为 probability `0.75`、margin `0.0`，validation auto-sort precision `0.9049`，但 final test auto-sort precision 只有 `0.5647`、review rate `0.6057`。这说明当前 v2 特征和模型在 seed holdout 下泛化不足，不能包装成成功结论。
 
 主要混淆来自低吸收硅酸盐/碳酸盐内部（如 Quartz-Albite-Orthoclase-Dolomite）和高吸收硫化物/氧化物内部（如 Hematite-Magnetite-Chalcopyrite-Pyrite）。旧的 `0.9960` 仍只能代表低/高吸收组二分类，不能外推到十材料分辨。
+
+## 8. v2 后续严格泛化复核
+
+v2 失败后，本仓库继续完成了 selected rebuild、GPU 候选模型和独立新 seed 复核。新增脚本：
+
+- `analysis/material_sorting_energy_scan.py`：开发集能量组合筛选，可限制候选 source subset，避免无意义全组合搜索。
+- `analysis/material_sorting_selected_rebuild.py`：selected rebuild 多 seed 评估，包含 GPU XGBoost 候选和层级 ExtraTrees。
+- `analysis/strict_generalization_audit.py`：严格 train/validation/test seed 复核，支持合并多个 raw profile，并标记已烧掉 test seed。
+
+关键结果：
+
+| 阶段 | 结果 |
+| --- | --- |
+| selected rebuild p5000旧测试 | Top-1 `0.9000`，macro-F1 `0.8993`，min recall `0.5000`，每类 support `6`，不 claim-safe |
+| `sr2` locked unseen final test | Top-1 `0.8800`，macro-F1 `0.8789`，min recall `0.5000`，每类 support `30`，失败 |
+| `es2` 扩展能量扫描三能量 | 推荐 `40/110/200 keV`，validation min recall `0.6000` |
+| `es2` 候选四能量 | 推荐 `40/110/120/200 keV`，validation min recall `0.6000` |
+
+`sr2` 的 final test seeds 为 `707/808/909/1001/1102`，不与旧 v2 test `303` 或 selected rebuild test `505` 重复。它仍未达标，主要因为 Hematite recall `0.5000`、Magnetite recall `0.6333`。
+
+因此当前项目结论应维持为：可复现候选检索和诊断链路已经增强，但十材料自动分选没有通过严格泛化验收。最新复核见 `docs/STRICT_GENERALIZATION_REVIEW_zh.md`。

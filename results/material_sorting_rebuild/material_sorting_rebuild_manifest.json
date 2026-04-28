@@ -1,0 +1,47 @@
+{
+  "package": "xrt-sorter-geant4-undergrad-guide",
+  "generated_by": "analysis/material_sorting_rebuild_diagnostics.py",
+  "generated_at_utc": "2026-04-27T15:54:37+00:00",
+  "raw_dir": "build/material_sorting_runs/full",
+  "output_dir": "results/material_sorting_rebuild",
+  "photon_budgets": [
+    100,
+    200,
+    500,
+    1000
+  ],
+  "screen_budget": 500,
+  "acceptance_targets": {
+    "top1_accuracy": 0.85,
+    "macro_f1": 0.8,
+    "min_class_recall": 0.7
+  },
+  "best_photon_budget_result": {
+    "photons_per_sample": 1000,
+    "selected_method": "ExtraTrees",
+    "table_mode": "multi_source_fused",
+    "train_rows": 300,
+    "validation_rows": 300,
+    "test_rows": 300,
+    "validation_top1_accuracy": 0.77,
+    "validation_top3_accuracy": 0.9966666666666667,
+    "validation_macro_f1": 0.7681929171139295,
+    "validation_min_class_recall": 0.3333333333333333,
+    "final_top1_accuracy": 0.8033333333333333,
+    "final_top3_accuracy": 1.0,
+    "final_macro_f1": 0.7962398424675698,
+    "final_min_class_recall": 0.3,
+    "passes_all_acceptance_targets": false
+  },
+  "stage_conclusion": "rebuild_diagnostic_only_not_success_claim",
+  "claim_boundary": [
+    "This script reuses completed v2 raw runs and does not turn v2 into a ten-material success claim.",
+    "The final test seed remains evaluation-only for each photon-budget curve point.",
+    "CNN/Transformer routes require sequence or image-like inputs; they are not applied to the current scalar table here.",
+    "V3 human-review product planning is intentionally out of scope for the public undergraduate teammate repo."
+  ],
+  "software": {
+    "python": "3.12.13",
+    "pandas": "3.0.1"
+  }
+}
