@@ -33,6 +33,7 @@ EXPECTED_THICKNESSES = [5.0, 10.0, 20.0]
 EXPECTED_SOURCES = ["mono_60kev", "mono_100kev", "spectrum_120kv"]
 EXPECTED_SEEDS = [TRAIN_SEED, VALIDATION_SEED, TEST_SEED]
 ENERGY_EDGES = [0.0, 40.0, 50.0, 60.0, 70.0, 80.0, 90.0, 100.0, 110.0, 120.0, math.inf]
+DETECTOR_RESPONSE_SIGMA_KEV = [2.0, 5.0]
 REVIEW_PROBABILITY_THRESHOLD = 0.65
 REVIEW_MARGIN_THRESHOLD = 0.15
 EPS = 0.5
@@ -45,6 +46,7 @@ FEATURE_FAMILY_ORDER = [
     "thickness_normalized_attenuation",
     "spectral_shape",
     "scatter_direct",
+    "detector_response",
     "source_fusion",
     "dictionary_distance",
     "other_numeric",
@@ -191,6 +193,45 @@ def bin_labels() -> list[str]:
     return labels
 
 
+def response_bin_labels(sigma_kev: float) -> list[str]:
+    tag = f"Rsig{int(round(sigma_kev * 10)):03d}"
+    return [f"{tag}_{label}" for label in bin_labels()]
+
+
+def normal_cdf(values: np.ndarray) -> np.ndarray:
+    erf = np.vectorize(math.erf)
+    return 0.5 * (1.0 + erf(values / math.sqrt(2.0)))
+
+
+def gaussian_response_counts(energies: np.ndarray, sigma_kev: float) -> np.ndarray:
+    if energies.size == 0:
+        return np.zeros(len(ENERGY_EDGES) - 1, dtype=float)
+    counts = []
+    for low, high in zip(ENERGY_EDGES[:-1], ENERGY_EDGES[1:]):
+        lower = normal_cdf((low - energies) / sigma_kev)
+        if math.isinf(high):
+            upper = np.ones_like(lower)
+        else:
+            upper = normal_cdf((high - energies) / sigma_kev)
+        counts.append(float(np.clip(upper - lower, 0.0, 1.0).sum()))
+    return np.array(counts, dtype=float)
+
+
+def finite_quantile(values: np.ndarray, quantile: float) -> float:
+    finite = values[np.isfinite(values)]
+    if finite.size == 0:
+        return 0.0
+    return float(np.quantile(finite, quantile))
+
+
+def histogram_entropy(counts: np.ndarray) -> float:
+    total = float(counts.sum())
+    if total <= 0:
+        return 0.0
+    probabilities = counts[counts > 0] / total
+    return float(-(probabilities * np.log(probabilities)).sum())
+
+
 def read_metadata(path: Path) -> dict:
     return json.loads(path.read_text(encoding="utf-8"))
 
@@ -270,9 +311,15 @@ def aggregate_run(record: RunRecord) -> pd.DataFrame:
             detector_edep_sum=("detector_edep_keV", "sum"),
             detector_edep_mean=("detector_edep_keV", "mean"),
             detector_edep_std=("detector_edep_keV", "std"),
+            detector_edep_q10=("detector_edep_keV", lambda value: float(value.quantile(0.10))),
+            detector_edep_q50=("detector_edep_keV", lambda value: float(value.quantile(0.50))),
+            detector_edep_q90=("detector_edep_keV", lambda value: float(value.quantile(0.90))),
             detector_edep_max=("detector_edep_keV", "max"),
+            detector_edep_nonzero_fraction=("detector_edep_keV", lambda value: float((value > 0).mean())),
             detector_gamma_sum=("detector_gamma_entries", "sum"),
+            detector_gamma_nonzero_fraction=("detector_gamma_entries", lambda value: float((value > 0).mean())),
             primary_gamma_sum=("primary_gamma_entries", "sum"),
+            primary_gamma_zero_fraction=("primary_gamma_entries", lambda value: float((value <= 0).mean())),
         )
         .reset_index()
     )
@@ -283,15 +330,31 @@ def aggregate_run(record: RunRecord) -> pd.DataFrame:
     label_cols = bin_labels()
     for col in label_cols:
         grouped[f"I_{col}"] = 0.0
+    response_cols = [(sigma, response_bin_labels(sigma)) for sigma in DETECTOR_RESPONSE_SIGMA_KEV]
+    for _, cols in response_cols:
+        for col in cols:
+            grouped[col] = 0.0
     grouped["hit_count"] = 0.0
     grouped["direct_primary_count"] = 0.0
     grouped["scattered_primary_count"] = 0.0
+    grouped["direct_hit_fraction"] = 0.0
     grouped["hit_energy_mean"] = 0.0
     grouped["hit_energy_std"] = 0.0
+    grouped["hit_energy_q10"] = 0.0
+    grouped["hit_energy_q50"] = 0.0
+    grouped["hit_energy_q90"] = 0.0
+    grouped["hit_energy_iqr"] = 0.0
+    grouped["hit_energy_entropy"] = 0.0
+    grouped["direct_hit_energy_mean"] = 0.0
+    grouped["scattered_hit_energy_mean"] = 0.0
     grouped["theta_mean"] = 0.0
     grouped["theta_std"] = 0.0
+    grouped["theta_q50"] = 0.0
+    grouped["theta_q90"] = 0.0
     grouped["r_mean"] = 0.0
     grouped["r_std"] = 0.0
+    grouped["r_q50"] = 0.0
+    grouped["r_q90"] = 0.0
 
     if record.hit_file.exists() and record.hit_file.stat().st_size > 100:
         hits = pd.read_csv(record.hit_file)
@@ -304,15 +367,39 @@ def aggregate_run(record: RunRecord) -> pd.DataFrame:
             counts, _ = np.histogram(energies, bins=np.array(ENERGY_EDGES, dtype=float))
             for col, count in zip(label_cols, counts):
                 grouped.loc[mask, f"I_{col}"] = float(count)
+            for sigma, cols in response_cols:
+                smoothed = gaussian_response_counts(energies, sigma)
+                for col, count in zip(cols, smoothed):
+                    grouped.loc[mask, col] = float(count)
+            direct_mask = part["is_direct_primary"].astype(bool).to_numpy()
+            scattered_mask = part["is_scattered_primary"].astype(bool).to_numpy()
+            theta_values = part["theta_deg"].replace(-1.0, np.nan).dropna().to_numpy(dtype=float)
+            radii = part["r_mm"].to_numpy(dtype=float)
             grouped.loc[mask, "hit_count"] = float(len(part))
             grouped.loc[mask, "direct_primary_count"] = float(part["is_direct_primary"].sum())
             grouped.loc[mask, "scattered_primary_count"] = float(part["is_scattered_primary"].sum())
+            grouped.loc[mask, "direct_hit_fraction"] = float(part["is_direct_primary"].mean())
             grouped.loc[mask, "hit_energy_mean"] = float(part["photon_energy_keV"].mean())
             grouped.loc[mask, "hit_energy_std"] = float(part["photon_energy_keV"].std(ddof=0))
+            grouped.loc[mask, "hit_energy_q10"] = finite_quantile(energies, 0.10)
+            grouped.loc[mask, "hit_energy_q50"] = finite_quantile(energies, 0.50)
+            grouped.loc[mask, "hit_energy_q90"] = finite_quantile(energies, 0.90)
+            grouped.loc[mask, "hit_energy_iqr"] = finite_quantile(energies, 0.75) - finite_quantile(energies, 0.25)
+            grouped.loc[mask, "hit_energy_entropy"] = histogram_entropy(counts.astype(float))
+            grouped.loc[mask, "direct_hit_energy_mean"] = float(energies[direct_mask].mean()) if direct_mask.any() else 0.0
+            grouped.loc[mask, "scattered_hit_energy_mean"] = float(energies[scattered_mask].mean()) if scattered_mask.any() else 0.0
             grouped.loc[mask, "theta_mean"] = float(part["theta_deg"].replace(-1.0, np.nan).mean(skipna=True) or 0.0)
             grouped.loc[mask, "theta_std"] = float(part["theta_deg"].replace(-1.0, np.nan).std(ddof=0) or 0.0)
+            grouped.loc[mask, "theta_q50"] = finite_quantile(theta_values, 0.50)
+            grouped.loc[mask, "theta_q90"] = finite_quantile(theta_values, 0.90)
             grouped.loc[mask, "r_mean"] = float(part["r_mm"].mean())
             grouped.loc[mask, "r_std"] = float(part["r_mm"].std(ddof=0))
+            grouped.loc[mask, "r_q50"] = finite_quantile(radii, 0.50)
+            grouped.loc[mask, "r_q90"] = finite_quantile(radii, 0.90)
+
+    grouped["hit_absence"] = (grouped["hit_count"] <= 0).astype(float)
+    grouped["log_hit_count"] = np.log1p(grouped["hit_count"])
+    grouped["log_detector_edep_sum"] = np.log1p(grouped["detector_edep_sum"].clip(lower=0.0))
 
     grouped.insert(0, "run_id", record.run_id)
     grouped.insert(0, "random_seed", record.random_seed)
@@ -410,6 +497,8 @@ def feature_family(col: str) -> str:
         return "dictionary_distance"
     if col.startswith("dual_source_"):
         return "source_fusion"
+    if base.startswith("Rsig"):
+        return "detector_response"
     if "direct_primary" in base or "scattered_primary" in base or "scatter" in base:
         return "scatter_direct"
     if base.startswith("T_") or base.startswith("primary_transmission") or base.startswith("detector_gamma_rate"):
@@ -442,6 +531,7 @@ def physics_feature_columns(feature_cols: list[str]) -> list[str]:
         "thickness_normalized_attenuation",
         "spectral_shape",
         "scatter_direct",
+        "detector_response",
         "source_fusion",
     }
     cols = columns_for_families(feature_cols, families)

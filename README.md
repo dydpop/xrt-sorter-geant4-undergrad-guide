@@ -71,6 +71,8 @@ flowchart LR
 
 后续 selected rebuild、GPU XGBoost 候选、`sr2` 独立新 seed final test 和 `es2` 扩展能量扫描也已经完成复核。`sr2` 在每类 final test support `30` 的条件下达到 Top-1 `0.88`、macro-F1 `0.8789`，但 Hematite 召回 `0.5`、Magnetite 召回 `0.6333`，仍未通过最低单类召回门槛。详见 `docs/MATERIAL_SORTING_V2_PROTOCOL_zh.md` 和 `docs/STRICT_GENERALIZATION_REVIEW_zh.md`。
 
+Accuracy Sprint v3 已加入分层分类、Hematite/Magnetite 专家候选、更细 hit/event 谱特征、detector-response smoothed counts，以及论文证据台账。首轮 v3 诊断输出在 `results/accuracy_v3/`，仍使用已烧掉的 `sr2` final seeds，因此不能作为新 claim；它的结论是 H/M 最低召回仍低于 `0.70`，下一步应生成新的 `accuracy_v3_hm` 小矩阵，而不是继续在 `sr2` 上调参。详见 `docs/ACCURACY_SPRINT_V3_LAB_NOTEBOOK_zh.md` 和 `docs/ACCURACY_V3_METHODS_NOTES_zh.md`。
+
 ## 快速运行
 
 如果你的环境已经安装 Geant4、CMake、C++17 编译器、Python、pandas 和 scikit-learn，可以从仓库根目录运行：

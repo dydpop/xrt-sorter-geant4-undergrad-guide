@@ -27,11 +27,28 @@ ENERGY_SCAN_SOURCES = [
     for energy in [30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 150, 200]
 ]
 SELECTED_REBUILD_SOURCE_IDS = ["mono_40kev", "mono_50kev", "mono_120kev"]
+ACCURACY_V3_SOURCE_IDS = [
+    "mono_30kev",
+    "mono_40kev",
+    "mono_50kev",
+    "mono_70kev",
+    "mono_90kev",
+    "mono_110kev",
+    "mono_120kev",
+    "mono_150kev",
+    "mono_200kev",
+]
+ACCURACY_V3_TRAIN_SEEDS = list(range(1201, 1221))
+ACCURACY_V3_VALIDATION_SEEDS = list(range(1301, 1306))
+ACCURACY_V3_FINAL_TEST_SEEDS = list(range(1401, 1406))
+ACCURACY_V3_HM_MATERIALS = ["Hematite", "Magnetite", "Pyrite", "Chalcopyrite"]
 PROFILE_EVENTS = {
     "pilot": 2000,
     "energy_scan": 5000,
     "full": 10000,
     "selected_rebuild": 10000,
+    "accuracy_v3_hm": 10000,
+    "accuracy_v3": 10000,
 }
 
 
@@ -50,20 +67,33 @@ def profile_seeds(profile: str) -> list[int]:
         return [101, 202]
     if profile == "selected_rebuild":
         return [101, 202, 303, 404, 505]
+    if profile in {"accuracy_v3_hm", "accuracy_v3"}:
+        return [*ACCURACY_V3_TRAIN_SEEDS, *ACCURACY_V3_VALIDATION_SEEDS, *ACCURACY_V3_FINAL_TEST_SEEDS]
     return SEEDS
 
 
 def profile_sources(profile: str, selected_source_ids: list[str] | None = None) -> list[dict]:
     if profile == "energy_scan":
         return ENERGY_SCAN_SOURCES
-    if profile == "selected_rebuild":
+    if profile in {"selected_rebuild", "accuracy_v3_hm", "accuracy_v3"}:
         lookup = source_lookup()
-        source_ids = selected_source_ids or SELECTED_REBUILD_SOURCE_IDS
+        if profile == "selected_rebuild":
+            source_ids = selected_source_ids or SELECTED_REBUILD_SOURCE_IDS
+        else:
+            source_ids = selected_source_ids or ACCURACY_V3_SOURCE_IDS
         missing = [source_id for source_id in source_ids if source_id not in lookup]
         if missing:
             raise ValueError(f"Unknown selected source ids: {missing}")
         return [lookup[source_id] for source_id in source_ids]
     return SOURCES
+
+
+def profile_material_names(profile: str, material_names: list[str] | None = None) -> list[str] | None:
+    if material_names:
+        return material_names
+    if profile == "accuracy_v3_hm":
+        return ACCURACY_V3_HM_MATERIALS
+    return None
 
 
 @dataclass(frozen=True)
@@ -87,9 +117,14 @@ def slugify(value: str) -> str:
     return value.strip().lower().replace(" ", "_")
 
 
-def load_materials(project_root: Path) -> pd.DataFrame:
+def load_materials(project_root: Path, material_names: list[str] | None = None) -> pd.DataFrame:
     df = pd.read_csv(project_root / MATERIALS_FILE)
     enabled = df[df["enabled_for_undergrad"].astype(str).str.lower().isin(["true", "1", "yes"])]
+    if material_names:
+        enabled = enabled[enabled["material_name"].astype(str).isin(material_names)].copy()
+        missing = sorted(set(material_names) - set(enabled["material_name"].astype(str)))
+        if missing:
+            raise ValueError(f"Requested materials are missing or not enabled: {missing}")
     if enabled.empty:
         raise ValueError("No enabled materials in material catalog.")
     return enabled
@@ -175,8 +210,9 @@ def build_matrix(
     profile_alias: str | None = None,
     seed_list: list[int] | None = None,
     events_per_run: int | None = None,
+    material_names: list[str] | None = None,
 ) -> list[MatrixRun]:
-    materials = load_materials(project_root)
+    materials = load_materials(project_root, profile_material_names(profile, material_names))
     profile_name = profile_alias or profile
     expected_events = events_per_run or PROFILE_EVENTS[profile]
     out_dir = OUTPUT_ROOT / profile_name
@@ -247,9 +283,10 @@ def write_matrix(
     profile_alias: str | None = None,
     seed_list: list[int] | None = None,
     events_per_run: int | None = None,
+    material_names: list[str] | None = None,
 ) -> Path:
     profile_name = profile_alias or profile
-    runs = build_matrix(project_root, profile, selected_source_ids, profile_name, seed_list, events_per_run)
+    runs = build_matrix(project_root, profile, selected_source_ids, profile_name, seed_list, events_per_run, material_names)
     out_dir = project_root / OUTPUT_ROOT / profile_name
     out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -292,8 +329,8 @@ def main() -> None:
     parser.add_argument("--profile", choices=sorted(PROFILE_EVENTS), default="pilot")
     parser.add_argument(
         "--selected-source-ids",
-        default=",".join(SELECTED_REBUILD_SOURCE_IDS),
-        help="Comma-separated source ids for selected_rebuild; ignored by other profiles.",
+        default="",
+        help="Comma-separated source ids for selected_rebuild or accuracy_v3 profiles. Defaults are profile-specific.",
     )
     parser.add_argument(
         "--profile-alias",
@@ -311,6 +348,11 @@ def main() -> None:
         default=0,
         help="Override macro/event expectation recorded in the matrix. The runner macro must still beamOn the same count.",
     )
+    parser.add_argument(
+        "--material-list",
+        default="",
+        help="Comma-separated material names or 'all'. accuracy_v3_hm defaults to Hematite/Magnetite/Pyrite/Chalcopyrite.",
+    )
     parser.add_argument("--project-root", default=Path(__file__).resolve().parents[1])
     args = parser.parse_args()
 
@@ -318,27 +360,30 @@ def main() -> None:
     profile_alias = args.profile_alias.strip() or None
     seed_list = parse_int_list(args.seed_list) if args.seed_list.strip() else None
     events_per_run = args.events_per_run or None
-    selected_source_ids = [
-        item.strip() for item in str(args.selected_source_ids).split(",") if item.strip()
-    ]
+    selected_source_ids = [item.strip() for item in str(args.selected_source_ids).split(",") if item.strip()] or None
+    material_names = None
+    if args.material_list.strip() and args.material_list.strip().lower() != "all":
+        material_names = [item.strip() for item in args.material_list.split(",") if item.strip()]
     matrix_path = write_matrix(
         project_root,
         args.profile,
-        selected_source_ids if args.profile == "selected_rebuild" else None,
+        selected_source_ids if args.profile in {"selected_rebuild", "accuracy_v3_hm", "accuracy_v3"} else None,
         profile_alias=profile_alias,
         seed_list=seed_list,
         events_per_run=events_per_run,
+        material_names=material_names,
     )
     runs = list(csv.DictReader(matrix_path.open(encoding="utf-8")))
     profile_name = profile_alias or args.profile
     print(f"Wrote {len(runs)} {profile_name} configs to {matrix_path}")
-    sources = profile_sources(args.profile, selected_source_ids if args.profile == "selected_rebuild" else None)
+    sources = profile_sources(args.profile, selected_source_ids if args.profile in {"selected_rebuild", "accuracy_v3_hm", "accuracy_v3"} else None)
     thicknesses = profile_thicknesses(args.profile)
     seeds = seed_list or profile_seeds(args.profile)
+    material_count = len(load_materials(project_root, profile_material_names(args.profile, material_names)))
     print(
         "Expected material matrix: "
-        f"10 materials x {len(thicknesses)} thicknesses x {len(sources)} sources x {len(seeds)} seeds "
-        f"= {10 * len(thicknesses) * len(sources) * len(seeds)} runs"
+        f"{material_count} materials x {len(thicknesses)} thicknesses x {len(sources)} sources x {len(seeds)} seeds "
+        f"= {material_count * len(thicknesses) * len(sources) * len(seeds)} runs"
     )
     print(f"Expected calibration matrix: {len(sources)} sources x {len(seeds)} seeds = {len(sources) * len(seeds)} runs")
 
