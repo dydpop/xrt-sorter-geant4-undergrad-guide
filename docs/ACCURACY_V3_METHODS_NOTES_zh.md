@@ -43,7 +43,9 @@ v3 在原有 calibrated transmission、attenuation、thickness-normalized attenu
 
 首轮 v3 诊断输出位于 `results/accuracy_v3/`。该目录使用已烧掉的 `sr2` final seeds，因此只能作为管线验证和负结果台账，不能作为新的泛化 claim。其主要结论是：现有 `sr2` 数据上的 H/M 最低召回仍低于 `0.70`，下一步必须跑新的 H/M-focused `accuracy_v3_hm` 数据。
 
-v4 增加 development-only 审计模式，用于 H/M-focused 数据阶段。该模式只写 validation 指标、failure analysis 和 H/M pairwise audit，不输出 final-test claim。`v3_hm_smoke` 已验证该路径可运行；`v3_hm_dev1` 是下一阶段主要数据矩阵。
+v4 增加 development-only 审计模式，用于 H/M-focused 数据阶段。该模式只写 validation 指标、failure analysis 和 H/M pairwise audit，不输出 final-test claim。`v3_hm_smoke` 已验证该路径可运行；`v3_hm_dev1` 已完成 819-run 开发矩阵，但 H/M validation recall 仍未过 `0.70`，因此不能进入十材料 full matrix。
+
+`v3_hm_dev1` 的 selected method 为 `HistGradientBoosting`，四材料 validation Top-1 为 `0.8125`，macro-F1 为 `0.8122`，但 Hematite recall 只有 `0.5833`，Magnetite recall 只有 `0.6667`。H/M pairwise audit 更差，H/M min recall 为 `0.3333`。这说明当前主要瓶颈不是十材料类别数量，而是 H/M 输入信号本身仍不够可分。
 
 ## H/M Pairwise Audit
 

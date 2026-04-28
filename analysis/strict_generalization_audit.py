@@ -702,20 +702,33 @@ def failure_analysis_frame(per_class: pd.DataFrame, decisions: pd.DataFrame, gro
     return pd.DataFrame(rows).sort_values(["failure_status", "recall", "material"])
 
 
-def registry_failure_reason(final_metrics: dict, min_support: int, reused_test: list[int], integrity: dict) -> str:
+def registry_failure_reason(
+    final_metrics: dict,
+    min_support: int,
+    min_support_required: int,
+    reused_test: list[int],
+    integrity: dict,
+    development_only: bool,
+) -> str:
     reasons = []
     if reused_test:
         reasons.append(f"reused_or_burned_test_seeds={';'.join(str(seed) for seed in reused_test)}")
     if not integrity["split_is_disjoint"]:
         reasons.append("split_overlap_detected")
-    if min_support < 30:
-        reasons.append(f"per_class_support_below_30={min_support}")
-    for metric, threshold in ACCEPTANCE_TARGETS.items():
-        value = float(final_metrics.get(metric, math.nan))
-        if math.isnan(value) or value < threshold:
-            reasons.append(f"{metric}_below_{threshold:g}")
-    if float(final_metrics.get("hm_min_recall", math.nan)) < ACCEPTANCE_TARGETS["min_class_recall"]:
-        reasons.append("hm_min_recall_below_target")
+    if min_support < min_support_required:
+        reasons.append(f"per_class_support_below_{min_support_required}={min_support}")
+    if development_only:
+        for metric in ["hematite_recall", "magnetite_recall", "hm_min_recall"]:
+            value = float(final_metrics.get(metric, math.nan))
+            if math.isnan(value) or value < ACCEPTANCE_TARGETS["min_class_recall"]:
+                reasons.append(f"development_{metric}_below_{ACCEPTANCE_TARGETS['min_class_recall']:g}")
+    else:
+        for metric, threshold in ACCEPTANCE_TARGETS.items():
+            value = float(final_metrics.get(metric, math.nan))
+            if math.isnan(value) or value < threshold:
+                reasons.append(f"{metric}_below_{threshold:g}")
+        if float(final_metrics.get("hm_min_recall", math.nan)) < ACCEPTANCE_TARGETS["min_class_recall"]:
+            reasons.append("hm_min_recall_below_target")
     return ";".join(reasons) if reasons else "none"
 
 
@@ -767,8 +780,23 @@ def experiment_registry_frame(
                 "model_feature_count": final_metrics.get("model_feature_count", math.nan),
                 "min_class_support_observed": min_support,
                 "claim_safe": claim_safe,
-                "failure_reason": registry_failure_reason(final_metrics, min_support, reused_test, integrity),
-                "next_action": "freeze_and_report" if claim_safe else "continue_train_validation_iteration_without_reusing_final_test",
+                "failure_reason": registry_failure_reason(
+                    final_metrics,
+                    min_support,
+                    int(args.min_class_support),
+                    reused_test,
+                    integrity,
+                    development_only,
+                ),
+                "next_action": (
+                    "freeze_and_report"
+                    if claim_safe
+                    else (
+                        "continue_hm_train_validation_iteration_without_opening_final_test"
+                        if development_only
+                        else "continue_train_validation_iteration_without_reusing_final_test"
+                    )
+                ),
             }
         ]
     )

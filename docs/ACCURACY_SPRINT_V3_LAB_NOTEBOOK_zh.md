@@ -95,3 +95,25 @@
 结论：全链路已经打通，但 `v3_hm_smoke` 明显未达标。失败集中在 Hematite 被误判为 Magnetite，pairwise audit 的 top features 主要来自 `mono_200kev` 的 detector-response、attenuation 和 spectral-shape 特征。这说明新增数据路线是可运行的，但 2 seeds + 4 energies 不足以支持 H/M separability。
 
 下一步已生成 `v3_hm_dev1` 配置：4 materials x 3 thicknesses x 9 sources x 7 seeds = 756 material runs，加 63 calibration runs，总计 819 runs。`v3_hm_dev1` 应分批运行，先跑 calibration，再按材料 run；运行完成后用 development-only audit 评估 train seeds `1201-1205` 到 validation seeds `1301/1302`。
+
+## 2026-04-28 v4 H/M dev1
+
+这轮是 `accuracy_v3_hm` 的第一轮开发矩阵。它仍然只使用 train/validation，不打开 final test。目标不是十材料 claim，而是检验更多 energy、thickness 和 seed 是否能把 Hematite/Magnetite 的 validation recall 推到 `0.70` 以上。
+
+| 项 | 结果 |
+| --- | --- |
+| profile | `v3_hm_dev1` |
+| materials | Hematite、Magnetite、Pyrite、Chalcopyrite |
+| sources | `30/40/50/70/90/110/120/150/200 keV` |
+| thickness | `5/10/20 mm` |
+| seeds | train `1201-1205`，validation `1301/1302` |
+| matrix | 756 material runs + 63 calibration runs |
+| run status | `819/819` completed，`0` failed |
+| selected method | `HistGradientBoosting` |
+| validation Top-1 / macro-F1 / min recall | `0.8125` / `0.8122` / `0.5833` |
+| validation Hematite / Magnetite recall | `0.5833` / `0.6667` |
+| H/M pairwise Top-1 / min recall / AUC | `0.5417` / `0.3333` / `0.6319` |
+
+结论：`v3_hm_dev1` 明确失败，不能进入十材料 `accuracy_v3`，也不应直接开 locked final test。新增 9 个能量点和更多 seeds 提高了总体四材料指标，但 H/M separability 仍然不足；尤其是 pairwise audit 的 Hematite recall 只有 `0.3333`，说明问题不只是分层策略，而是当前输入物理信息仍然不够区分两种铁氧化物。
+
+下一步不进入 `v3_hm_dev2`。应先在 H/M-focused 数据内做低能细扫和特征/模型诊断：加入 `15/20/25/35 keV`，优先只比较 H/M 或维持四材料背景；同时检查 `mono_70/90/120/150/200 keV` 的 spectral-shape、thickness-normalized attenuation 和 detector-response 特征是否稳定贡献，而不是盲目扩大十材料矩阵。
