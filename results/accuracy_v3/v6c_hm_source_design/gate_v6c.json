@@ -1,0 +1,32 @@
+{
+  "generated_by": "analysis/accuracy_v6c_gate.py",
+  "generated_at_utc": "2026-04-29T15:41:05+00:00",
+  "audit_dir": "results/accuracy_v3/v6c_hm_source_design",
+  "thresholds": {
+    "thickness_aware_hm_min_recall": 0.8,
+    "thickness_blind_hm_min_recall": 0.75,
+    "pairwise_hm_min_recall": 0.75,
+    "min_class_support": 120
+  },
+  "observed": {
+    "method": "ExtraTrees",
+    "thickness_aware_hm_min_recall": 0.6333333333333333,
+    "thickness_blind_hm_min_recall": 0.65,
+    "pairwise_hm_min_recall": 0.6333333333333333,
+    "min_class_support": 60
+  },
+  "runner_status": {
+    "status_file_exists": true,
+    "rows_in_status_file": 4752,
+    "completed": 4752,
+    "failed": 0
+  },
+  "checks": {
+    "thickness_aware_hm_min_recall": false,
+    "thickness_blind_hm_min_recall": false,
+    "pairwise_hm_min_recall": false,
+    "min_class_support": false,
+    "runner_failed_zero": true
+  },
+  "gate_passed": false
+}

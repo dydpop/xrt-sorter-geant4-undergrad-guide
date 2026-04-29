@@ -1,0 +1,143 @@
+{
+  "generated_by": "analysis/hm_v6c_development_audit.py",
+  "generated_at_utc": "2026-04-29T15:38:20+00:00",
+  "protocol_name": "v6c_hm_source_design_development",
+  "development_only": true,
+  "shadow_or_final_used": false,
+  "raw_dirs": [
+    "build/material_sorting_runs/v6c_hm_source_design"
+  ],
+  "output_dir": "results/accuracy_v3/v6c_hm_source_design",
+  "photon_budget": 5000,
+  "train_seeds": [
+    2101,
+    2102,
+    2103,
+    2104,
+    2105,
+    2106,
+    2107,
+    2108,
+    2109,
+    2110,
+    2111,
+    2112
+  ],
+  "validation_seeds": [
+    2201,
+    2202,
+    2203,
+    2204,
+    2205,
+    2206
+  ],
+  "methods": [
+    "LogisticRegression",
+    "SVM_Linear",
+    "ExtraTrees",
+    "HistGradientBoosting"
+  ],
+  "selected_method": "ExtraTrees",
+  "status": {
+    "material_metadata_found": 4320,
+    "calibration_metadata_found": 432,
+    "materials_found": [
+      "Hematite",
+      "Magnetite"
+    ],
+    "sources_found": [
+      "mono_120kev_normal_narrow",
+      "mono_120kev_normal_wide",
+      "mono_120kev_oblique_10deg",
+      "mono_150kev_normal_narrow",
+      "mono_150kev_normal_wide",
+      "mono_150kev_oblique_10deg",
+      "mono_200kev_normal_narrow",
+      "mono_200kev_normal_wide",
+      "mono_200kev_oblique_10deg",
+      "mono_50kev_normal_narrow",
+      "mono_50kev_normal_wide",
+      "mono_50kev_oblique_10deg",
+      "mono_70kev_normal_narrow",
+      "mono_70kev_normal_wide",
+      "mono_70kev_oblique_10deg",
+      "mono_90kev_normal_narrow",
+      "mono_90kev_normal_wide",
+      "mono_90kev_oblique_10deg"
+    ],
+    "thicknesses_found": [
+      5.0,
+      10.0,
+      15.0,
+      20.0,
+      30.0
+    ],
+    "seeds_found": [
+      2101,
+      2102,
+      2103,
+      2104,
+      2105,
+      2106,
+      2107,
+      2108,
+      2109,
+      2110,
+      2111,
+      2112,
+      2201,
+      2202,
+      2203,
+      2204,
+      2205,
+      2206,
+      2301,
+      2302,
+      2303,
+      2304,
+      2305,
+      2306
+    ],
+    "table_mode": "multi_source_fused",
+    "rows": 480
+  },
+  "feature_counts": {
+    "base": 2579,
+    "model": 2535,
+    "thickness_blind": 2534
+  },
+  "development_validation_metrics": {
+    "thickness_aware": {
+      "method": "ExtraTrees",
+      "samples": 120,
+      "top1_accuracy": 0.6583333333333333,
+      "top3_accuracy": 1.0,
+      "macro_f1": 0.6581196581196581,
+      "hematite_recall": 0.6833333333333333,
+      "magnetite_recall": 0.6333333333333333,
+      "hm_min_recall": 0.6333333333333333,
+      "min_class_recall": 0.6333333333333333,
+      "feature_count": 2535,
+      "feature_mode": "thickness_aware",
+      "base_feature_count": 2579
+    },
+    "thickness_blind": {
+      "method": "ExtraTrees",
+      "samples": 120,
+      "top1_accuracy": 0.6833333333333333,
+      "top3_accuracy": 1.0,
+      "macro_f1": 0.6829810901001112,
+      "hematite_recall": 0.7166666666666667,
+      "magnetite_recall": 0.65,
+      "hm_min_recall": 0.65,
+      "min_class_recall": 0.65,
+      "feature_count": 2534,
+      "feature_mode": "thickness_blind",
+      "base_feature_count": 2579
+    }
+  },
+  "software": {
+    "python": "3.12.13",
+    "pandas": "3.0.1"
+  }
+}

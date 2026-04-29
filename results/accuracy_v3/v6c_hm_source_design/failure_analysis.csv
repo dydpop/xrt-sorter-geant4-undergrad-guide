@@ -1,0 +1,3 @@
+material,support,recall,miss_count,common_confusions,failure_status,next_action
+Hematite,60,0.6833333333333333,19,Magnetite:19,fail,inspect_source_geometry_and_scatter_features
+Magnetite,60,0.6333333333333333,22,Hematite:22,fail,inspect_source_geometry_and_scatter_features
