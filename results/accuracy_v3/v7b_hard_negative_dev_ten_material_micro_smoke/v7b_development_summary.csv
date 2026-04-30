@@ -1,0 +1,2 @@
+method,round_id,samples,top1_accuracy,top3_accuracy,macro_f1,min_class_recall,hm_min_recall,hm_pairwise_min_recall,key_hard_negative_pair_min_recall,model_size_rank,feature_count
+HMPairwiseRerankExtraTrees,1,40,0.7,0.975,0.6901010101010101,0.25,0.5,0.5,0.5,6,1537

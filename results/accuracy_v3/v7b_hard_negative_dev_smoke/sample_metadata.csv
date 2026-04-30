@@ -1,0 +1,17 @@
+sample_index,material,group_label,category,thickness_mm,random_seed,sample_id,split,legacy_source,sample_weight_base
+0,Hematite,high_absorption,iron_oxide,5.0,4101,0,train,v7b,1.0
+1,Hematite,high_absorption,iron_oxide,5.0,4101,1,train,v7b,1.0
+2,Hematite,high_absorption,iron_oxide,5.0,4101,2,train,v7b,1.0
+3,Hematite,high_absorption,iron_oxide,5.0,4101,3,train,v7b,1.0
+4,Magnetite,high_absorption,iron_oxide,5.0,4101,0,train,v7b,1.0
+5,Magnetite,high_absorption,iron_oxide,5.0,4101,1,train,v7b,1.0
+6,Magnetite,high_absorption,iron_oxide,5.0,4101,2,train,v7b,1.0
+7,Magnetite,high_absorption,iron_oxide,5.0,4101,3,train,v7b,1.0
+8,Hematite,high_absorption,iron_oxide,5.0,4201,0,validation,v7b,1.0
+9,Hematite,high_absorption,iron_oxide,5.0,4201,1,validation,v7b,1.0
+10,Hematite,high_absorption,iron_oxide,5.0,4201,2,validation,v7b,1.0
+11,Hematite,high_absorption,iron_oxide,5.0,4201,3,validation,v7b,1.0
+12,Magnetite,high_absorption,iron_oxide,5.0,4201,0,validation,v7b,1.0
+13,Magnetite,high_absorption,iron_oxide,5.0,4201,1,validation,v7b,1.0
+14,Magnetite,high_absorption,iron_oxide,5.0,4201,2,validation,v7b,1.0
+15,Magnetite,high_absorption,iron_oxide,5.0,4201,3,validation,v7b,1.0

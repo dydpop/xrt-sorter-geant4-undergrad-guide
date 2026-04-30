@@ -1,0 +1,7 @@
+split,pair,material_a,material_b,recall_a,recall_b,pair_min_recall,support,common_wrong_predictions
+validation,Hematite/Magnetite,Hematite,Magnetite,0.75,0.5,0.5,8,Hematite:2;Magnetite:1
+validation,Pyrite/Chalcopyrite,Pyrite,Chalcopyrite,0.75,1.0,0.75,8,Chalcopyrite:1
+validation,Calcite/Dolomite,Calcite,Dolomite,1.0,0.5,0.5,8,Calcite:2
+validation,Orthoclase/Albite,Orthoclase,Albite,0.75,0.5,0.5,8,Orthoclase:2;Quartz:1
+validation,Pyrite/Galena,Pyrite,Galena,0.75,1.0,0.75,8,Chalcopyrite:1
+validation,Chalcopyrite/Galena,Chalcopyrite,Galena,1.0,1.0,1.0,8,

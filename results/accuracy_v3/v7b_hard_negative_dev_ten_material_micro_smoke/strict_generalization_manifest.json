@@ -1,0 +1,62 @@
+{
+  "generated_by": "analysis/train_v7b.py",
+  "generated_at_utc": "2026-04-30T15:51:16+00:00",
+  "protocol_name": "v7b_hard_negative_dev_training",
+  "development_only": true,
+  "shadow_or_final_used": false,
+  "cube_dir": "results/accuracy_v3/v7b_hard_negative_dev_ten_material_micro_smoke",
+  "output_dir": "results/accuracy_v3/v7b_hard_negative_dev_ten_material_micro_smoke",
+  "methods": [
+    "ExtraTrees",
+    "GroupExpertExtraTrees",
+    "HMPairwiseRerankExtraTrees"
+  ],
+  "repeat_rounds_requested": 1,
+  "repeat_rounds_observed": 1,
+  "hard_negative_weight": 3.0,
+  "tensor_shape": [
+    80,
+    1,
+    2,
+    8,
+    8,
+    12
+  ],
+  "records_used": 20,
+  "calibration_records_used": 2,
+  "feature_count": 1537,
+  "selected_method": "HMPairwiseRerankExtraTrees",
+  "selected_round": 1,
+  "key_hard_pairs": [
+    [
+      "Hematite",
+      "Magnetite"
+    ],
+    [
+      "Pyrite",
+      "Chalcopyrite"
+    ],
+    [
+      "Calcite",
+      "Dolomite"
+    ],
+    [
+      "Orthoclase",
+      "Albite"
+    ],
+    [
+      "Pyrite",
+      "Galena"
+    ],
+    [
+      "Chalcopyrite",
+      "Galena"
+    ]
+  ],
+  "software": {
+    "python": "3.12.13",
+    "pandas": "3.0.1",
+    "numpy": "2.3.5",
+    "xgboost_available": true
+  }
+}

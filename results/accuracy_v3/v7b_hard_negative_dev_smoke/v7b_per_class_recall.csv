@@ -1,0 +1,11 @@
+split,material,support,precision,recall,f1
+validation,Quartz,0,0.0,0.0,0.0
+validation,Calcite,0,0.0,0.0,0.0
+validation,Orthoclase,0,0.0,0.0,0.0
+validation,Albite,0,0.0,0.0,0.0
+validation,Dolomite,0,0.0,0.0,0.0
+validation,Pyrite,0,0.0,0.0,0.0
+validation,Hematite,4,0.5,0.5,0.5
+validation,Magnetite,4,0.5,0.5,0.5
+validation,Chalcopyrite,0,0.0,0.0,0.0
+validation,Galena,0,0.0,0.0,0.0

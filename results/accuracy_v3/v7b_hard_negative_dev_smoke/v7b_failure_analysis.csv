@@ -1,0 +1,11 @@
+material,support,recall,miss_count,common_confusions,failure_status,next_action
+Quartz,0,0.0,0,,fail,inspect_hard_pair_or_group_expert
+Calcite,0,0.0,0,,fail,inspect_hard_pair_or_group_expert
+Orthoclase,0,0.0,0,,fail,inspect_hard_pair_or_group_expert
+Albite,0,0.0,0,,fail,inspect_hard_pair_or_group_expert
+Dolomite,0,0.0,0,,fail,inspect_hard_pair_or_group_expert
+Pyrite,0,0.0,0,,fail,inspect_hard_pair_or_group_expert
+Hematite,4,0.5,2,Magnetite:2,fail,inspect_hard_pair_or_group_expert
+Magnetite,4,0.5,2,Hematite:2,fail,inspect_hard_pair_or_group_expert
+Chalcopyrite,0,0.0,0,,fail,inspect_hard_pair_or_group_expert
+Galena,0,0.0,0,,fail,inspect_hard_pair_or_group_expert

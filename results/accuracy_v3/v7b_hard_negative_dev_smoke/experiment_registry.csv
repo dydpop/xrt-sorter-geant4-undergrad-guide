@@ -1,0 +1,2 @@
+timestamp_utc,protocol_name,evaluation_stage,selected_method,selected_round,top1_accuracy,macro_f1,hm_min_recall,hm_pairwise_min_recall,gate_passed,claim_safe,next_action
+2026-04-30T15:51:07+00:00,v7b_hard_negative_dev_training,development_validation_only,ExtraTrees,1,0.5,0.1,0.5,0.5,False,False,v7B_round_or_v7B2_physics_matrix

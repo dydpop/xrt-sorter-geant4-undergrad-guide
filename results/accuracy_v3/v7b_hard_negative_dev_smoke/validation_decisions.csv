@@ -1,0 +1,9 @@
+material,predicted_material,is_correct,top1_score,top2_score,score_margin,top3_candidates,group_label,category,thickness_mm,random_seed,sample_id,split
+Hematite,Hematite,True,0.5871428571428572,0.41285714285714287,0.17428571428571432,Hematite;Magnetite,high_absorption,iron_oxide,5.0,4201,0,validation
+Hematite,Magnetite,False,0.5528571428571428,0.4471428571428571,0.1057142857142857,Magnetite;Hematite,high_absorption,iron_oxide,5.0,4201,1,validation
+Hematite,Hematite,True,0.6114285714285714,0.38857142857142857,0.22285714285714286,Hematite;Magnetite,high_absorption,iron_oxide,5.0,4201,2,validation
+Hematite,Magnetite,False,0.5085714285714286,0.49142857142857144,0.017142857142857126,Magnetite;Hematite,high_absorption,iron_oxide,5.0,4201,3,validation
+Magnetite,Hematite,False,0.5328571428571428,0.46714285714285714,0.06571428571428567,Hematite;Magnetite,high_absorption,iron_oxide,5.0,4201,0,validation
+Magnetite,Magnetite,True,0.6485714285714286,0.3514285714285714,0.29714285714285715,Magnetite;Hematite,high_absorption,iron_oxide,5.0,4201,1,validation
+Magnetite,Hematite,False,0.6014285714285714,0.3985714285714286,0.20285714285714285,Hematite;Magnetite,high_absorption,iron_oxide,5.0,4201,2,validation
+Magnetite,Magnetite,True,0.52,0.48,0.040000000000000036,Magnetite;Hematite,high_absorption,iron_oxide,5.0,4201,3,validation

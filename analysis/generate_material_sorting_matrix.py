@@ -53,12 +53,17 @@ PROFILE_EVENTS = {
     "accuracy_v3_hm": 10000,
     "accuracy_v3": 10000,
     "v6c_hm_source_design": 10000,
+    "v7b_hard_negative_dev": 20000,
 }
 V6C_HM_MATERIALS = ["Hematite", "Magnetite"]
 V6C_HM_ENERGIES_KEV = [50, 70, 90, 120, 150, 200]
 V6C_HM_THICKNESS_MM = [5.0, 10.0, 15.0, 20.0, 30.0]
 V6C_HM_SEEDS = [*range(2101, 2113), *range(2201, 2207), *range(2301, 2307)]
 V6C_HM_SOURCE_VARIANTS = ["normal_narrow", "normal_wide", "oblique_10deg"]
+V7B_ENERGIES_KEV = [70, 90, 120, 150, 200]
+V7B_THICKNESS_MM = [5.0, 10.0, 15.0, 20.0, 30.0]
+V7B_SEEDS = [*range(4101, 4113), *range(4201, 4207)]
+V7B_SOURCE_VARIANTS = ["normal_narrow", "normal_wide", "oblique_10deg", "oblique_20deg"]
 
 
 def energy_slug(energy_keV: float) -> str:
@@ -98,8 +103,9 @@ def source_variant_config(variant: str) -> dict:
             "incidence_angle_deg": 0.0,
             "detector_layout": "transmission_plus_side_scatter",
         }
-    if variant == "oblique_10deg":
-        angle_rad = math.radians(10.0)
+    if variant in {"oblique_10deg", "oblique_20deg"}:
+        angle_deg = 10.0 if variant == "oblique_10deg" else 20.0
+        angle_rad = math.radians(angle_deg)
         source_x_mm = -300.0
         source_y_mm = -abs(source_x_mm) * math.tan(angle_rad)
         return {
@@ -111,7 +117,7 @@ def source_variant_config(variant: str) -> dict:
             "dir_x": math.cos(angle_rad),
             "dir_y": math.sin(angle_rad),
             "dir_z": 0.0,
-            "incidence_angle_deg": 10.0,
+            "incidence_angle_deg": angle_deg,
             "detector_layout": "transmission_plus_side_scatter",
         }
     raise ValueError(f"Unknown source variant: {variant}")
@@ -146,6 +152,8 @@ def profile_thicknesses(profile: str) -> list[float]:
         return [10.0]
     if profile == "v6c_hm_source_design":
         return V6C_HM_THICKNESS_MM
+    if profile == "v7b_hard_negative_dev":
+        return V7B_THICKNESS_MM
     return THICKNESS_MM
 
 
@@ -158,6 +166,8 @@ def profile_seeds(profile: str) -> list[int]:
         return [*ACCURACY_V3_TRAIN_SEEDS, *ACCURACY_V3_VALIDATION_SEEDS, *ACCURACY_V3_FINAL_TEST_SEEDS]
     if profile == "v6c_hm_source_design":
         return V6C_HM_SEEDS
+    if profile == "v7b_hard_negative_dev":
+        return V7B_SEEDS
     return SEEDS
 
 
@@ -169,6 +179,11 @@ def profile_sources(
 ) -> list[dict]:
     if profile == "v6c_hm_source_design":
         return v6c_sources(energy_list_keV, source_variants)
+    if profile == "v7b_hard_negative_dev":
+        return v6c_sources(
+            energy_list_keV or [float(energy) for energy in V7B_ENERGIES_KEV],
+            source_variants or V7B_SOURCE_VARIANTS,
+        )
     if energy_list_keV:
         return [mono_source(energy) for energy in energy_list_keV]
     if profile == "energy_scan":

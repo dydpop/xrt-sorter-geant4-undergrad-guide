@@ -1,0 +1,47 @@
+{
+  "generated_by": "analysis/train_v7b.py",
+  "generated_at_utc": "2026-04-30T15:51:07+00:00",
+  "audit_dir": "//?/UNC/wsl.localhost/Ubuntu-22.04/home/dyd/geant4-projects/xrt_sorter/release/xrt_sorter_public_undergrad_repo_20260426/results/accuracy_v3/v7b_hard_negative_dev_smoke",
+  "thresholds": {
+    "top1_accuracy": 0.85,
+    "macro_f1": 0.82,
+    "min_class_recall": 0.7,
+    "hm_min_recall": 0.8,
+    "hm_pairwise_min_recall": 0.78,
+    "key_hard_negative_pair_min_recall": 0.75,
+    "min_validation_support_per_class": 100,
+    "runner_failures": 0,
+    "runner_pending": 0
+  },
+  "observed": {
+    "method": "ExtraTrees",
+    "round_id": 1,
+    "top1_accuracy": 0.5,
+    "macro_f1": 0.1,
+    "min_class_recall": 0.0,
+    "hm_min_recall": 0.5,
+    "hm_pairwise_min_recall": 0.5,
+    "key_hard_negative_pair_min_recall": 0.0,
+    "min_validation_support_per_class": 0,
+    "runner_failures": 0,
+    "runner_pending": 0,
+    "runner_completed": 12,
+    "runner_expected_rows": 12,
+    "runner_status_checked": true
+  },
+  "checks": {
+    "top1_accuracy": false,
+    "macro_f1": false,
+    "min_class_recall": false,
+    "hm_min_recall": false,
+    "hm_pairwise_min_recall": false,
+    "key_hard_negative_pair_min_recall": false,
+    "min_validation_support_per_class": false,
+    "runner_failures": true,
+    "runner_pending": true,
+    "runner_status_available": true,
+    "shadow_or_final_not_used": true
+  },
+  "gate_passed": false,
+  "stop_rule": "If three v7B development rounds fail, stop tuning this validation set and design v7B2 physical matrix."
+}

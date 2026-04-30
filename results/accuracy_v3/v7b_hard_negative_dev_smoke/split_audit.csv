@@ -1,0 +1,5 @@
+split,random_seed,material,samples
+train,4101,Hematite,4
+train,4101,Magnetite,4
+validation,4201,Hematite,4
+validation,4201,Magnetite,4

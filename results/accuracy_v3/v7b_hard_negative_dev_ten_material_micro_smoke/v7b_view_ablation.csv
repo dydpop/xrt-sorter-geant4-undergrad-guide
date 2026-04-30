@@ -1,0 +1,8 @@
+method,round_id,samples,top1_accuracy,top3_accuracy,macro_f1,min_class_recall,hm_min_recall,hm_pairwise_min_recall,key_hard_negative_pair_min_recall,model_size_rank,view_name,feature_count
+ExtraTrees,0,40,0.675,0.975,0.6450793650793651,0.0,0.5,0.5,0.5,0,all,1537
+ExtraTrees,0,40,0.6,1.0,0.5820634920634921,0.0,0.75,0.75,0.5,0,transmission_only,769
+ExtraTrees,0,40,0.425,0.75,0.37690476190476196,0.0,0.25,0.25,0.0,0,side_scatter_only,769
+ExtraTrees,0,40,0.675,0.975,0.6522222222222223,0.0,0.5,0.5,0.5,0,high_energy_only,1537
+ExtraTrees,0,40,0.1,0.3,0.01818181818181818,0.0,0.0,0.0,0.0,0,oblique_only,1
+ExtraTrees,0,40,0.1,0.3,0.01818181818181818,0.0,0.0,0.0,0.0,0,oblique_20deg_only,1
+ExtraTrees,0,40,0.1,0.3,0.01818181818181818,0.0,0.0,0.0,0.0,0,normal_wide_only,1
