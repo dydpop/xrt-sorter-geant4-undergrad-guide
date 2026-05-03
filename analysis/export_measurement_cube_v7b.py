@@ -6,6 +6,7 @@ import math
 import platform
 from datetime import datetime, timezone
 from pathlib import Path
+from time import perf_counter
 
 import numpy as np
 import pandas as pd
@@ -34,6 +35,13 @@ CHANNELS = [
 ]
 VARIANT_RANK = {"normal_narrow": 0, "normal_wide": 1, "oblique_10deg": 2, "oblique_20deg": 3}
 EPS = 1e-6
+
+
+def log_progress(message: str, *, start_time: float | None = None) -> None:
+    elapsed = ""
+    if start_time is not None:
+        elapsed = f" elapsed={perf_counter() - start_time:.1f}s"
+    print(f"[v7b-export] {datetime.now().isoformat(timespec='seconds')} {message}{elapsed}", flush=True)
 
 
 def parse_int_list(value: str) -> list[int]:
@@ -231,15 +239,22 @@ def read_hits(record: v2.RunRecord, photon_budget: int) -> pd.DataFrame:
     return hits
 
 
-def calibration_rates(records: list[v2.RunRecord], photon_budget: int) -> dict[tuple[str, int, str], float]:
+def calibration_rates(
+    records: list[v2.RunRecord],
+    photon_budget: int,
+    progress_every: int = 25,
+    start_time: float | None = None,
+) -> dict[tuple[str, int, str], float]:
     rates: dict[tuple[str, int, str], float] = {}
-    for record in records:
+    for index, record in enumerate(records, start=1):
         if record.hit_file.stat().st_size <= 0:
             continue
         hits = read_hits(record, photon_budget)
         grouped = hits.groupby(["sample_id", "detector_id"]).size().reset_index(name="count")
         for detector_id, part in grouped.groupby("detector_id"):
             rates[(record.source_id, int(record.random_seed), str(detector_id))] = float(part["count"].mean()) / float(photon_budget)
+        if progress_every > 0 and (index == 1 or index % progress_every == 0 or index == len(records)):
+            log_progress(f"calibration_records={index}/{len(records)} calibration_rates={len(rates)}", start_time=start_time)
     return rates
 
 
@@ -323,10 +338,12 @@ def main() -> None:
     parser.add_argument("--source-ids", default="", help="Optional comma-separated source filter for smoke runs.")
     parser.add_argument("--seeds", default="", help="Optional comma-separated seed filter applied after split rules.")
     parser.add_argument("--thicknesses", default="", help="Optional comma-separated thickness filter.")
+    parser.add_argument("--progress-every", type=int, default=250, help="Print progress after this many material records; <=0 disables per-record progress.")
     parser.add_argument("--include-shadow", action="store_true")
     parser.add_argument("--write-feature-csv", action="store_true")
     args = parser.parse_args()
 
+    start_time = perf_counter()
     project_root = Path(args.project_root).resolve()
     output_dir = project_root / args.output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -338,8 +355,13 @@ def main() -> None:
     thickness_filter = set(parse_float_list(args.thicknesses)) if args.thicknesses.strip() else set()
     materials = set(parse_str_list(args.materials))
     catalog = material_catalog(project_root)
+    log_progress(f"start project_root={project_root} output_dir={output_dir}", start_time=start_time)
 
     material_records, calibration_records = discover_records(project_root, parse_raw_dirs(project_root, args.raw_dir, args.raw_dirs), materials)
+    log_progress(
+        f"discovered material_records={len(material_records)} calibration_records={len(calibration_records)}",
+        start_time=start_time,
+    )
     material_records = filter_material_records(
         material_records,
         train_seeds,
@@ -361,10 +383,20 @@ def main() -> None:
     source_ids = sorted({record.source_id for record in material_records}, key=source_sort_key)
     source_to_index = {source_id: index for index, source_id in enumerate(source_ids)}
     metadata, key_to_index = build_sample_index(material_records, args.photon_budget, train_seeds, validation_seeds, catalog)
-    calib_rates = calibration_rates(calibration_records, args.photon_budget)
+    log_progress(
+        f"filtered material_records={len(material_records)} calibration_records={len(calibration_records)} samples={len(metadata)} sources={len(source_ids)}",
+        start_time=start_time,
+    )
+    calib_rates = calibration_rates(
+        calibration_records,
+        args.photon_budget,
+        progress_every=max(1, min(args.progress_every, 50)) if args.progress_every > 0 else 0,
+        start_time=start_time,
+    )
     cube = np.zeros((len(metadata), len(source_ids), len(DETECTORS), args.grid_bins, args.grid_bins, len(CHANNELS)), dtype=np.float32)
+    log_progress(f"allocated cube_shape={cube.shape} cube_bytes={cube.nbytes}", start_time=start_time)
 
-    for record in material_records:
+    for index, record in enumerate(material_records, start=1):
         write_record_into_cube(
             cube,
             record,
@@ -374,8 +406,11 @@ def main() -> None:
             args.photon_budget,
             args.grid_bins,
         )
+        if args.progress_every > 0 and (index == 1 or index % args.progress_every == 0 or index == len(material_records)):
+            log_progress(f"material_records={index}/{len(material_records)}", start_time=start_time)
 
     names = np.array(feature_names(source_ids, args.grid_bins), dtype=object)
+    log_progress("writing compressed npz", start_time=start_time)
     np.savez_compressed(
         output_dir / "measurement_cube.npz",
         X=cube,
@@ -384,6 +419,7 @@ def main() -> None:
         detector_ids=np.array(DETECTORS, dtype=object),
         channels=np.array(CHANNELS, dtype=object),
     )
+    log_progress("writing metadata files", start_time=start_time)
     metadata.to_csv(output_dir / "sample_metadata.csv", index=False, lineterminator="\n")
     (output_dir / "feature_columns.txt").write_bytes(("\n".join(str(name) for name in names) + "\n").encode("utf-8"))
     split_audit = (
@@ -428,8 +464,8 @@ def main() -> None:
     (output_dir / "measurement_cube_manifest.json").write_bytes(
         (json.dumps(manifest, ensure_ascii=False, indent=2, allow_nan=False) + "\n").encode("utf-8")
     )
-    print(f"Wrote v7B measurement cube to {output_dir}")
-    print(f"tensor_shape={tuple(cube.shape)} samples={len(metadata)} feature_count={len(names)}")
+    log_progress(f"Wrote v7B measurement cube to {output_dir}", start_time=start_time)
+    log_progress(f"tensor_shape={tuple(cube.shape)} samples={len(metadata)} feature_count={len(names)}", start_time=start_time)
 
 
 if __name__ == "__main__":
