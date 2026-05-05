@@ -124,3 +124,18 @@ smoke is:
 Its generated output defaults to `results/accuracy_v3/v8a_event_to_feature_smoke/`
 and remains an untracked development evidence directory unless explicitly
 packaged later.
+
+After the completed 90-row v8A boundary-smoke matrix, the tiny
+training/control gate is:
+
+- `analysis/train_v8a_event_feature_smoke.py`
+
+Its generated output defaults to
+`results/accuracy_v3/v8a_event_training_smoke/` and remains an untracked
+development evidence directory unless explicitly packaged later. The current
+passing decision is development-only and only permits v8A balanced development
+design review.
+
+The parallel peak-provenance review plan is:
+
+- `docs/ACCURACY_SPRINT_V8A_PEAK_PROVENANCE_UPGRADE_PLAN_zh.md`

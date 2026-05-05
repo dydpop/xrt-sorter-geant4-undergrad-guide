@@ -235,3 +235,49 @@ Current tiny result interpretation:
 - The schema/control gate may pass if source-on signal is above source-off and lineage/contract checks are clean.
 - The training gate must remain blocked when only the original 12 boundary-smoke rows are available, because those rows are train-only and do not provide balanced source-on/off H/M validation support.
 - This is intentional. It prevents the boundary-smoke conversion from becoming an accuracy claim.
+
+## 12. Balanced event-feature tiny training gate
+
+After the existing 90-row `v8a_custom_diffraction_g4_smoke` matrix is fully completed, rerun the event-to-feature pipeline and then run:
+
+- `analysis/train_v8a_event_feature_smoke.py`
+
+This script is allowed to run only after `v8a_event_schema_gate.json` reports `tiny_training_gate_allowed=true`.
+
+It trains development-only diagnostic models on event-derived `diffraction_*` features and keeps controls separate:
+
+- main diffraction-only features;
+- total-count-only control;
+- overlap-only control;
+- thickness/pose-only control;
+- shuffled-label control;
+- source-off leakage control.
+
+No lineage columns such as `material`, `source_id`, `sample_id`, paths, seeds, thickness, or pose may enter the main model.
+
+Default command:
+
+```bash
+/home/dyd/geant4-projects/xrt_sorter/.venv/bin/python \
+  analysis/train_v8a_event_feature_smoke.py \
+  --project-root . \
+  --input-dir results/accuracy_v3/v8a_event_to_feature_smoke \
+  --schema-contract analysis/configs/v8a_diffraction_output_schema_contract.json \
+  --output-dir results/accuracy_v3/v8a_event_training_smoke \
+  --overwrite
+```
+
+Current 90-row balanced development status:
+
+- `v8a_custom_diffraction_g4_smoke` has 90 completed development rows: H/M source-on/off, train/validation split, and thickness/pose coverage are balanced enough for the tiny gate.
+- Updated event-to-feature output has `sample_count=90`, `long_row_count=13095`, `source_on_rows=60`, `source_off_rows=30`, `split_counts={"train":54,"validation":36}`, `source_off_signal_max=0.00075`, and `tiny_training_gate_allowed=true`.
+- The tiny training/control gate passed with decision `proceed_to_v8a_balanced_dev_design_review`: best main H/M min recall `1.0`, worst-thickness H/M min recall `1.0`, total-count-only `0.3333`, overlap-only `0.6667`, thickness/pose-only `0.0`, shuffled-label `0.3333`, source-off `0.5`.
+- Interpretation remains development-only. This result supports continuing to a v8A balanced development design review; it does not open shadow/final, does not justify a full v8A matrix by itself, and does not make the current project-scan peak table manuscript-grade provenance.
+
+## 13. Peak provenance upgrade
+
+The parallel H/M peak provenance plan is:
+
+- `docs/ACCURACY_SPRINT_V8A_PEAK_PROVENANCE_UPGRADE_PLAN_zh.md`
+
+This is a planning and review artifact. It does not by itself upgrade the current peak table. The current `hm_powder_peaks_project_scan_v8a` manifest remains development-only until a CIF-derived, literature/Rietveld, or measured-reference successor manifest is created and reviewed.
