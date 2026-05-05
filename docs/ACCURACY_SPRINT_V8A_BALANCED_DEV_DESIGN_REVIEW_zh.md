@@ -234,3 +234,77 @@ because a total-count-only shortcut still carries H/M information. The next
 phase must rework total-count confounding, for example by adding count-residual
 or count-normalized main-feature variants and keeping the total-count-only
 negative-control ceiling active. Shadow/final remain sealed.
+
+## 11. Total-count rework status
+
+The count-matched total-count rework gate was run on the existing medium
+development outputs only:
+
+- script: `analysis/train_v8a_medium_count_matched_rework.py`
+- output: `results/accuracy_v3/v8a_medium_count_matched_rework/`
+- matching variable: `control_total_count_norm`
+- matching tolerance: `0.020`
+- matched pairs: train `138`, validation `60`, stress-holdout `61`
+- main validation H/M min recall: `1.0`
+- main stress-holdout H/M min recall: `1.0`
+- total-count-only max H/M min recall: `0.7667`
+- decision: `count_matched_total_count_rework_still_blocked`
+
+Stop reasons:
+
+- `total_count_only_below_ceiling`
+- `shuffled_label_below_ceiling`
+- `main_minus_total_count_margin`
+
+Interpretation: simple total-count nearest-neighbor matching does not remove the
+count shortcut. The main diffraction signal remains strong, but this result is
+still not clean enough for promotion.
+
+The stricter count-balance sensitivity audit was then run:
+
+- script: `analysis/audit_v8a_count_balance_sensitivity.py`
+- output: `results/accuracy_v3/v8a_count_balance_sensitivity/`
+- decision: `existing_medium_outputs_need_count_overlap_extension`
+- passed strategies: `0`
+- key observation: strict count-balanced strategies keep main H/M min recall at
+  `1.0` and suppress total-count-only controls, but they retain too little
+  train/validation/stress-holdout support for an accepted gate.
+
+Best sensitivity examples:
+
+- `fixed_bin_width_0p003`: train `52` pairs, validation `20`, stress-holdout
+  `29`, main H/M min recall `1.0/1.0`, total-count H/M min recall
+  `0.4500/0.3448`
+- `quantile_bins_12`: train `49` pairs, validation `20`, stress-holdout `30`,
+  main H/M min recall `1.0/1.0`, total-count H/M min recall `0.5000/0.4333`
+
+Interpretation: the evidence is promising but under-supported. The right next
+step is not full-matrix promotion and not shadow/final. It is a narrow
+development-only count-overlap extension.
+
+## 12. Count-overlap extension preregistration
+
+The count-overlap extension preregistration package is:
+
+- `analysis/configs/v8a_count_overlap_extension_config.json`
+- `analysis/generate_v8a_count_overlap_extension_matrix.py`
+- `analysis/audit_v8a_count_overlap_extension_prereg.py`
+
+Current preregistration result:
+
+- profile: `v8a_hm_count_overlap_extension_cif_literature`
+- rows: `672`
+- train rows: `288`
+- validation rows: `240`
+- stress-holdout rows: `144`
+- materials: H/M balanced
+- source modes: source-on only (`default` and `stress`)
+- peak table: `hm_powder_peaks_cif_or_literature_v8a`
+- decision: `count_overlap_extension_preregistered_not_run`
+- training unlocked: `false`
+
+The extension is intentionally narrow. It exists only to add development
+source-on support around count-balanced regions so the next combined
+medium-plus-extension feature table can rerun the count-balance sensitivity and
+count-matched gates. Existing medium source-off rows remain the source-off
+control. Shadow/final remain sealed.

@@ -1,0 +1,70 @@
+{
+  "config_id": "v8a_count_overlap_extension_config",
+  "version": "2026-05-05",
+  "status": "development_preregistration",
+  "claim_scope": "H/M development-only count-overlap extension; not shadow/final, product accuracy, hardware validation, full ten-material matrix, or manuscript-grade powder XRD",
+  "profile": "v8a_hm_count_overlap_extension_cif_literature",
+  "base_profile": "v8a_hm_medium_development_cif_literature",
+  "peak_manifest": "source_models/config/diffraction_peak_tables/hm_powder_peaks_cif_or_literature_v8a_manifest.json",
+  "required_peak_table_id": "hm_powder_peaks_cif_or_literature_v8a",
+  "source_energy_kev": 35.0,
+  "photons_per_row": 4000,
+  "design_rationale": {
+    "trigger": "v8A medium Phase 4 and count-matched rework were stopped by total-count-only controls.",
+    "evidence": "count-balance sensitivity showed main diffraction signal remains strong when total-count controls pass, but strict balanced subsets lack train/validation/stress-holdout support.",
+    "extension_goal": "Increase count-overlap support using additional development-only source-on rows, then rerun count-balance sensitivity and Phase 4 controls.",
+    "no_go_boundary": "Do not open shadow/final or claim product accuracy from this extension."
+  },
+  "splits": {
+    "train": {
+      "seeds": [7401, 7402, 7403, 7404, 7405, 7406]
+    },
+    "validation": {
+      "seeds": [7501, 7502, 7503, 7504, 7505]
+    },
+    "stress_holdout": {
+      "seeds": [7601, 7602, 7603]
+    }
+  },
+  "materials": ["Hematite", "Magnetite"],
+  "thickness_mm": [3.0, 10.0, 30.0, 60.0],
+  "pose_indices": [0, 1, 2],
+  "source_modes": [
+    {"source_mode": "on", "stress_label": "default"},
+    {"source_mode": "on", "stress_label": "stress"}
+  ],
+  "expected_rows": {
+    "train": 288,
+    "validation": 240,
+    "stress_holdout": 144,
+    "total": 672
+  },
+  "expected_combined_count_balance_support": {
+    "strategy": "fixed_bin_width_0p003",
+    "train_pairs_min": 100,
+    "validation_pairs_min": 50,
+    "stress_holdout_pairs_min": 50,
+    "total_count_only_hm_min_recall_max": 0.60,
+    "main_hm_min_recall_min": 0.95
+  },
+  "hard_guards": {
+    "development_only": true,
+    "shadow_or_final_used": false,
+    "full_ten_material_matrix": false,
+    "source_on_extension_only": true,
+    "requires_peak_provenance_gate_passed": true,
+    "requires_medium_stress_gate_passed": true,
+    "requires_count_balance_sensitivity_stop": true,
+    "requires_successor_source_peak_table": true,
+    "requires_no_lineage_leakage": true
+  },
+  "post_run_conditions": [
+    "extension matrix generation completed",
+    "all extension rows are development-only",
+    "source_peak_table_id equals hm_powder_peaks_cif_or_literature_v8a",
+    "run extension Geant4 rows only if explicitly entering the next execution phase",
+    "combine extension source-on rows with existing medium source-on/source-off development features",
+    "rerun count-balance sensitivity and count-matched rework gates",
+    "do not open shadow/final"
+  ]
+}

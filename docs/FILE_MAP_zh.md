@@ -174,3 +174,28 @@ The total-count confounder diagnostic for a stopped Phase 4 gate is:
 
 Its generated output defaults to
 `results/accuracy_v3/v8a_medium_total_count_control_diagnostic/`.
+
+The count-matched total-count rework gate is:
+
+- `analysis/train_v8a_medium_count_matched_rework.py`
+
+Its generated output defaults to
+`results/accuracy_v3/v8a_medium_count_matched_rework/`. It evaluates a
+development-only total-count-matched subset and residualized sensitivity checks.
+
+The follow-up count-balance sensitivity audit is:
+
+- `analysis/audit_v8a_count_balance_sensitivity.py`
+
+Its generated output defaults to
+`results/accuracy_v3/v8a_count_balance_sensitivity/`.
+
+The count-overlap extension preregistration package is:
+
+- `analysis/configs/v8a_count_overlap_extension_config.json`
+- `analysis/generate_v8a_count_overlap_extension_matrix.py`
+- `analysis/audit_v8a_count_overlap_extension_prereg.py`
+
+Its generated profile is
+`source_models/config/material_sorting_matrix/v8a_hm_count_overlap_extension_cif_literature/`.
+It is development-only, source-on only, and does not unlock training by itself.
