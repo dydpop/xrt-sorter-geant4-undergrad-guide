@@ -304,3 +304,15 @@ The clean Geant4 matrix completed `504/504` rows and passed event schema plus
 visible non-material shortcut auditing, but admission stopped before training
 because shuffled-label/null behavior remained too high. Training remains
 locked pending paired-clean null protocol rework.
+
+The paired-clean null protocol report is:
+
+- `docs/ACCURACY_SPRINT_V8A_PAIRED_CLEAN_NULL_REPORT_zh.md`
+
+Its source-controlled script is:
+
+- `analysis/diagnose_v8a_paired_clean_null_behavior.py`
+
+This gate tests strict paired clean views by balancing pseudo-label orientation
+inside train seed blocks and nuisance dimensions before admission is allowed to
+consider renewed development-only training diagnostics.

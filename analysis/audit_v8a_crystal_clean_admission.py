@@ -27,6 +27,8 @@ THRESHOLDS = {
     "fixed_threshold_null_hm_max": 0.55,
     "selected_threshold_null_hm_max": 0.55,
     "within_strata_fixed_threshold_null_hm_max": 0.55,
+    "paired_null_hm_p95_max": 0.55,
+    "paired_null_hm_single_seed_max": 0.65,
 }
 
 
@@ -70,6 +72,9 @@ def leakage_like_main_features(main_cols: list[str]) -> list[str]:
 
 
 def write_report(output_dir: Path, gate: dict[str, Any]) -> None:
+    paired_null = bool(gate.get("paired_null_protocol", False))
+    fixed_null_label = "Fixed-threshold null p95" if paired_null else "Fixed-threshold null max"
+    selected_null_label = "Selected-threshold null p95" if paired_null else "Selected-threshold null max"
     lines = [
         "# v8A crystal-clean admission audit",
         "",
@@ -84,12 +89,18 @@ def write_report(output_dir: Path, gate: dict[str, Any]) -> None:
         f"- Training unlocked: `{str(gate['training_unlocked']).lower()}`",
         f"- Matched pairs: train `{gate['matched_pair_counts']['train']}`, validation `{gate['matched_pair_counts']['validation']}`, stress-holdout `{gate['matched_pair_counts']['stress_holdout']}`",
         f"- Max non-material balanced accuracy: `{gate['max_nonmaterial_balanced_accuracy']:.4f}`",
-        f"- Fixed-threshold null max: `{gate['fixed_threshold_null_hm_max']:.4f}`",
-        f"- Selected-threshold null max: `{gate['selected_threshold_null_hm_max']:.4f}`",
-        "",
-        "## Stop Reasons",
-        "",
+        f"- Null protocol: `{gate['null_gate_protocol']}`",
+        f"- {fixed_null_label}: `{gate['fixed_threshold_null_hm_gate_value']:.4f}`",
+        f"- {selected_null_label}: `{gate['selected_threshold_null_hm_gate_value']:.4f}`",
     ]
+    if paired_null:
+        lines.extend(
+            [
+                f"- Fixed-threshold null single-seed max: `{gate['fixed_threshold_null_single_seed_max']:.4f}`",
+                f"- Selected-threshold null single-seed max: `{gate['selected_threshold_null_single_seed_max']:.4f}`",
+            ]
+        )
+    lines.extend(["", "## Stop Reasons", ""])
     if gate["stop_reasons"]:
         lines.extend(f"- {reason}" for reason in gate["stop_reasons"])
     else:
@@ -129,9 +140,20 @@ def main() -> None:
     counts = pair_counts(frame)
     lineage_like = leakage_like_main_features(main_cols)
     max_nonmaterial = float(shortcut_gate.get("max_nonmaterial_balanced_accuracy", 1.0))
-    fixed_null = float(null_gate.get("fixed_threshold_hm_min_recall_max", 1.0))
-    selected_null = float(null_gate.get("selected_threshold_hm_min_recall_max", 1.0))
-    within_null = float(null_gate.get("within_strata_fixed_threshold_hm_min_recall_max", 1.0))
+    null_protocol = str(null_gate.get("protocol_name", ""))
+    paired_null_protocol = null_protocol == "v8A_paired_clean_null_behavior_diagnosis"
+    if paired_null_protocol:
+        fixed_gate_value = float(null_gate.get("primary_fixed_threshold_hm_min_recall_p95", 1.0))
+        selected_gate_value = float(null_gate.get("primary_selected_threshold_hm_min_recall_p95", 1.0))
+        fixed_null_max = float(null_gate.get("primary_fixed_threshold_hm_min_recall_max", 1.0))
+        selected_null_max = float(null_gate.get("primary_selected_threshold_hm_min_recall_max", 1.0))
+        within_null = 0.0
+    else:
+        fixed_gate_value = float(null_gate.get("fixed_threshold_hm_min_recall_max", 1.0))
+        selected_gate_value = float(null_gate.get("selected_threshold_hm_min_recall_max", 1.0))
+        fixed_null_max = fixed_gate_value
+        selected_null_max = selected_gate_value
+        within_null = float(null_gate.get("within_strata_fixed_threshold_hm_min_recall_max", 1.0))
     pass_items = {
         "view_schema_gate_passed": bool(schema_gate.get("gate_passed", False)),
         "view_training_not_preunlocked": not bool(schema_gate.get("training_unlocked", False)),
@@ -146,10 +168,24 @@ def main() -> None:
         "shortcut_gate_passed": bool(shortcut_gate.get("gate_passed", False)),
         "nonmaterial_predictability_below_ceiling": max_nonmaterial <= THRESHOLDS["nonmaterial_balanced_accuracy_max"],
         "null_gate_passed": bool(null_gate.get("gate_passed", False)),
-        "fixed_threshold_null_below_ceiling": fixed_null <= THRESHOLDS["fixed_threshold_null_hm_max"],
-        "selected_threshold_null_below_ceiling": selected_null <= THRESHOLDS["selected_threshold_null_hm_max"],
+        "fixed_threshold_null_below_ceiling": fixed_gate_value <= (
+            THRESHOLDS["paired_null_hm_p95_max"] if paired_null_protocol else THRESHOLDS["fixed_threshold_null_hm_max"]
+        ),
+        "selected_threshold_null_below_ceiling": selected_gate_value <= (
+            THRESHOLDS["paired_null_hm_p95_max"] if paired_null_protocol else THRESHOLDS["selected_threshold_null_hm_max"]
+        ),
+        "fixed_threshold_null_max_below_ceiling": fixed_null_max <= (
+            THRESHOLDS["paired_null_hm_single_seed_max"] if paired_null_protocol else THRESHOLDS["fixed_threshold_null_hm_max"]
+        ),
+        "selected_threshold_null_max_below_ceiling": selected_null_max <= (
+            THRESHOLDS["paired_null_hm_single_seed_max"] if paired_null_protocol else THRESHOLDS["selected_threshold_null_hm_max"]
+        ),
         "within_strata_null_below_ceiling": within_null <= THRESHOLDS["within_strata_fixed_threshold_null_hm_max"],
     }
+    fixed_null_failure = "fixed_threshold_null_p95_exceeded_ceiling" if paired_null_protocol else "fixed_threshold_null_exceeded_ceiling"
+    selected_null_failure = (
+        "selected_threshold_null_p95_exceeded_ceiling" if paired_null_protocol else "selected_threshold_null_exceeded_ceiling"
+    )
     failure_labels = {
         "view_schema_gate_passed": "view_schema_gate_failed",
         "view_training_not_preunlocked": "view_training_was_preunlocked",
@@ -164,8 +200,10 @@ def main() -> None:
         "shortcut_gate_passed": "shortcut_gate_failed",
         "nonmaterial_predictability_below_ceiling": "nonmaterial_predictability_exceeded_ceiling",
         "null_gate_passed": "null_gate_failed",
-        "fixed_threshold_null_below_ceiling": "fixed_threshold_null_exceeded_ceiling",
-        "selected_threshold_null_below_ceiling": "selected_threshold_null_exceeded_ceiling",
+        "fixed_threshold_null_below_ceiling": fixed_null_failure,
+        "selected_threshold_null_below_ceiling": selected_null_failure,
+        "fixed_threshold_null_max_below_ceiling": "fixed_threshold_null_single_seed_max_exceeded_ceiling",
+        "selected_threshold_null_max_below_ceiling": "selected_threshold_null_single_seed_max_exceeded_ceiling",
         "within_strata_null_below_ceiling": "within_strata_null_exceeded_ceiling",
     }
     stop_reasons = [failure_labels[name] for name, passed in pass_items.items() if not passed]
@@ -188,11 +226,21 @@ def main() -> None:
         "tiny_training_gate_allowed": gate_passed,
         "decision": "crystal_clean_view_training_diagnostics_unlocked" if gate_passed else "stop_crystal_clean_view_before_training",
         "matched_pair_counts": counts,
+        "null_gate_protocol": null_protocol,
+        "paired_null_protocol": paired_null_protocol,
         "main_feature_count": int(len(main_cols)),
         "lineage_like_main_features": lineage_like,
         "max_nonmaterial_balanced_accuracy": max_nonmaterial,
-        "fixed_threshold_null_hm_max": fixed_null,
-        "selected_threshold_null_hm_max": selected_null,
+        "fixed_threshold_null_hm_gate_value": fixed_gate_value,
+        "selected_threshold_null_hm_gate_value": selected_gate_value,
+        "fixed_threshold_null_hm_gate_statistic": "p95" if paired_null_protocol else "max",
+        "selected_threshold_null_hm_gate_statistic": "p95" if paired_null_protocol else "max",
+        "paired_fixed_threshold_null_hm_p95": fixed_gate_value if paired_null_protocol else None,
+        "paired_selected_threshold_null_hm_p95": selected_gate_value if paired_null_protocol else None,
+        "fixed_threshold_null_hm_max": fixed_null_max,
+        "selected_threshold_null_hm_max": selected_null_max,
+        "fixed_threshold_null_single_seed_max": fixed_null_max,
+        "selected_threshold_null_single_seed_max": selected_null_max,
         "within_strata_fixed_threshold_null_hm_max": within_null,
         "thresholds": THRESHOLDS,
         "pass_items": pass_items,
