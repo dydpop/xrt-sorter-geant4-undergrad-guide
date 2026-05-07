@@ -14,6 +14,7 @@ import pandas as pd
 from diagnose_v8a_paired_clean_null_behavior import (
     NULL_MODES,
     PRIMARY_MODE,
+    SUPPORTED_NULL_MODES,
     apply_pair_orientations,
     magnetite_probability,
     model_specs,
@@ -108,7 +109,13 @@ def score_metrics(y_true: np.ndarray, probabilities: np.ndarray, roc_auc_score: 
     }
 
 
-def evaluate_threshold_free_null(frame: pd.DataFrame, main_cols: list[str], seeds: list[int], roc_auc_score: Any) -> pd.DataFrame:
+def evaluate_threshold_free_null(
+    frame: pd.DataFrame,
+    main_cols: list[str],
+    seeds: list[int],
+    roc_auc_score: Any,
+    null_modes: tuple[str, ...] = NULL_MODES,
+) -> pd.DataFrame:
     train = frame[frame["split"].astype(str).eq("train") & frame["source_mode"].astype(str).eq("custom_diffraction_on")].copy()
     validation = frame[frame["split"].astype(str).eq("validation") & frame["source_mode"].astype(str).eq("custom_diffraction_on")].copy()
     holdout = frame[frame["split"].astype(str).eq("stress_holdout") & frame["source_mode"].astype(str).eq("custom_diffraction_on")].copy()
@@ -118,7 +125,7 @@ def evaluate_threshold_free_null(frame: pd.DataFrame, main_cols: list[str], seed
     x_train = train[main_cols].fillna(0.0).to_numpy(dtype=np.float64)
     eval_frames = {"validation": validation, "stress_holdout": holdout}
     rows: list[dict[str, Any]] = []
-    for mode in NULL_MODES:
+    for mode in null_modes:
         for seed in seeds:
             orientations = orientation_map_for_mode(pairs, seed, mode)
             y_train, effective_shuffle_fraction, orientation_diag = apply_pair_orientations(train, orientations)
@@ -260,6 +267,11 @@ def main() -> None:
     parser.add_argument("--input-dir", required=True)
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--shuffle-seeds", default=",".join(str(seed) for seed in range(11001, 11061)))
+    parser.add_argument(
+        "--null-modes",
+        default=",".join(NULL_MODES),
+        help="Comma-separated paired-null orientation modes. First mode is the primary gate mode.",
+    )
     parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args()
 
@@ -279,11 +291,18 @@ def main() -> None:
     if not main_cols:
         raise RuntimeError("No diffraction_* main features available.")
     seeds = [int(item.strip()) for item in args.shuffle_seeds.split(",") if item.strip()]
+    null_modes = tuple(item.strip() for item in args.null_modes.split(",") if item.strip())
+    unknown_modes = sorted(set(null_modes) - set(SUPPORTED_NULL_MODES))
+    if unknown_modes:
+        raise RuntimeError(f"Unsupported paired-clean null mode(s): {unknown_modes}")
+    if not null_modes:
+        raise RuntimeError("At least one paired-clean null mode is required.")
+    primary_mode = null_modes[0]
     sk = require_sklearn()
-    rows = evaluate_threshold_free_null(frame, main_cols, seeds, sk["roc_auc_score"])
+    rows = evaluate_threshold_free_null(frame, main_cols, seeds, sk["roc_auc_score"], null_modes)
     summary = summarize(rows)
 
-    primary = summary[summary["shuffle_mode"].astype(str).eq(PRIMARY_MODE)]
+    primary = summary[summary["shuffle_mode"].astype(str).eq(primary_mode)]
     all_modes = summary.copy()
     primary_oriented_auc_p95 = float(primary["oriented_auc_p95"].max()) if not primary.empty else 1.0
     all_modes_oriented_auc_p95 = float(all_modes["oriented_auc_p95"].max()) if not all_modes.empty else 1.0
@@ -352,6 +371,9 @@ def main() -> None:
         "training_unlocked": False,
         "claim_scope": CLAIM_SCOPE,
         "input_dir": args.input_dir,
+        "primary_shuffle_mode": primary_mode,
+        "required_shuffle_modes": list(null_modes),
+        "supported_shuffle_modes": list(SUPPORTED_NULL_MODES),
         "main_feature_count": int(len(main_cols)),
         "shuffle_seed_count": int(len(seeds)),
         "threshold_free_gate_passed": threshold_free_gate_passed,

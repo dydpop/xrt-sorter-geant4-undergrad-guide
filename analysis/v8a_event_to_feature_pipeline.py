@@ -34,6 +34,7 @@ OPTIONAL_CLEAN_LINEAGE_FIELDS = [
     "count_target_photons",
     "clean_pair_id",
     "nuisance_cell_id",
+    "pair_replicate_index",
 ]
 
 

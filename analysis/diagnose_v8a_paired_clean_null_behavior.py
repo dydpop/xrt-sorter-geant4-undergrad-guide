@@ -21,7 +21,10 @@ CLAIM_SCOPE = (
 
 PRIMARY_MODE = "paired_nuisance_balanced_orientation"
 SECONDARY_MODE = "seed_block_random_balanced_orientation"
+STRICT_POSE_COUNT_MODE = "seed_block_pose_count_strict_balanced_orientation"
+STRICT_FULL_CELL_MODE = "seed_block_thickness_pose_count_strict_balanced_orientation"
 NULL_MODES = (PRIMARY_MODE, SECONDARY_MODE)
+SUPPORTED_NULL_MODES = (PRIMARY_MODE, SECONDARY_MODE, STRICT_POSE_COUNT_MODE, STRICT_FULL_CELL_MODE)
 
 THRESHOLDS = {
     "shuffle_seed_count_min": 60,
@@ -161,6 +164,30 @@ def orientation_map_for_mode(pairs: pd.DataFrame, seed: int, mode: str) -> dict[
             for pair_id in pair_ids:
                 orientations[str(pair_id)] = -1 if pair_id in swap_ids else 1
         return orientations
+    if mode == STRICT_POSE_COUNT_MODE:
+        for _, group in pairs.groupby(["seed_block", "pose_index", "count_target_bin"], sort=True):
+            pair_ids = group["clean_match_pair_id"].astype(str).to_numpy()
+            if len(pair_ids) % 2 != 0:
+                raise RuntimeError(
+                    "Strict seed-block/pose/count-bin balanced orientation requires an even pair count per cell."
+                )
+            swap_count = len(pair_ids) // 2
+            swap_ids = set(rng.choice(pair_ids, size=swap_count, replace=False).tolist())
+            for pair_id in pair_ids:
+                orientations[str(pair_id)] = -1 if pair_id in swap_ids else 1
+        return orientations
+    if mode == STRICT_FULL_CELL_MODE:
+        for _, group in pairs.groupby(["seed_block", "thickness_mm", "pose_index", "count_target_bin"], sort=True):
+            pair_ids = group["clean_match_pair_id"].astype(str).to_numpy()
+            if len(pair_ids) % 2 != 0:
+                raise RuntimeError(
+                    "Strict seed-block/thickness/pose/count-bin balanced orientation requires an even pair count per cell."
+                )
+            swap_count = len(pair_ids) // 2
+            swap_ids = set(rng.choice(pair_ids, size=swap_count, replace=False).tolist())
+            for pair_id in pair_ids:
+                orientations[str(pair_id)] = -1 if pair_id in swap_ids else 1
+        return orientations
     if mode != PRIMARY_MODE:
         raise ValueError(f"Unknown paired-clean null mode: {mode}")
 
@@ -184,8 +211,8 @@ def orientation_map_for_mode(pairs: pd.DataFrame, seed: int, mode: str) -> dict[
 
 
 def apply_pair_orientations(train: pd.DataFrame, orientations: dict[str, int]) -> tuple[np.ndarray, float, dict[str, float]]:
-    labels = train["material"].astype(str).to_numpy()
-    pseudo = pd.Series(labels, index=train.index, dtype=object)
+    labels = train["material"].astype(str).to_numpy().copy()
+    pseudo = pd.Series(labels.copy(), index=train.index, dtype=object)
     orientation_by_row = pd.Series(0, index=train.index, dtype=int)
     for pair_id, group_index in train.groupby("clean_match_pair_id", sort=True).groups.items():
         sign = int(orientations[str(pair_id)])
@@ -213,6 +240,7 @@ def orientation_balance_diagnostics(train: pd.DataFrame, orientation_by_row: pd.
         "seed_block_thickness_pose": ["seed_block", "thickness_mm", "pose_index"],
         "seed_block_thickness_count_bin": ["seed_block", "thickness_mm", "count_target_bin"],
         "seed_block_pose_count_bin": ["seed_block", "pose_index", "count_target_bin"],
+        "seed_block_thickness_pose_count_bin": ["seed_block", "thickness_mm", "pose_index", "count_target_bin"],
     }.items():
         if not cols:
             sums = [float(pair_frame["orientation"].sum())]
@@ -222,7 +250,13 @@ def orientation_balance_diagnostics(train: pd.DataFrame, orientation_by_row: pd.
     return diagnostics
 
 
-def evaluate_paired_null(frame: pd.DataFrame, main_cols: list[str], seeds: list[int], sk: dict[str, Any]) -> pd.DataFrame:
+def evaluate_paired_null(
+    frame: pd.DataFrame,
+    main_cols: list[str],
+    seeds: list[int],
+    sk: dict[str, Any],
+    null_modes: tuple[str, ...] = NULL_MODES,
+) -> pd.DataFrame:
     train = frame[frame["split"].astype(str).eq("train") & frame["source_mode"].astype(str).eq("custom_diffraction_on")].copy()
     validation = frame[frame["split"].astype(str).eq("validation") & frame["source_mode"].astype(str).eq("custom_diffraction_on")].copy()
     holdout = frame[frame["split"].astype(str).eq("stress_holdout") & frame["source_mode"].astype(str).eq("custom_diffraction_on")].copy()
@@ -232,7 +266,7 @@ def evaluate_paired_null(frame: pd.DataFrame, main_cols: list[str], seeds: list[
     x_train = train[main_cols].fillna(0.0).to_numpy(dtype=np.float64)
     eval_frames = {"validation": validation, "stress_holdout": holdout}
     rows: list[dict[str, Any]] = []
-    for mode in NULL_MODES:
+    for mode in null_modes:
         for seed in seeds:
             orientations = orientation_map_for_mode(pairs, seed, mode)
             y_train, effective_shuffle_fraction, orientation_diag = apply_pair_orientations(train, orientations)
@@ -290,6 +324,12 @@ def summarize_null(rows: pd.DataFrame) -> pd.DataFrame:
                 "seed_block_pose_max_abs_orientation_sum": float(group["seed_block_pose_max_abs_orientation_sum"].max()),
                 "seed_block_count_bin_max_abs_orientation_sum": float(group["seed_block_count_bin_max_abs_orientation_sum"].max()),
                 "seed_block_thickness_max_abs_orientation_sum": float(group["seed_block_thickness_max_abs_orientation_sum"].max()),
+                "seed_block_pose_count_bin_max_abs_orientation_sum": float(
+                    group["seed_block_pose_count_bin_max_abs_orientation_sum"].max()
+                ),
+                "seed_block_thickness_pose_count_bin_max_abs_orientation_sum": float(
+                    group["seed_block_thickness_pose_count_bin_max_abs_orientation_sum"].max()
+                ),
             }
         )
     return pd.DataFrame(result)
@@ -357,6 +397,11 @@ def main() -> None:
     parser.add_argument("--input-dir", required=True)
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--shuffle-seeds", default=",".join(str(seed) for seed in range(11001, 11061)))
+    parser.add_argument(
+        "--null-modes",
+        default=",".join(NULL_MODES),
+        help="Comma-separated paired-null orientation modes. First mode is the primary gate mode.",
+    )
     parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args()
 
@@ -376,11 +421,18 @@ def main() -> None:
     if not main_cols:
         raise RuntimeError("No diffraction_* main features available.")
     seeds = [int(item.strip()) for item in args.shuffle_seeds.split(",") if item.strip()]
+    null_modes = tuple(item.strip() for item in args.null_modes.split(",") if item.strip())
+    unknown_modes = sorted(set(null_modes) - set(SUPPORTED_NULL_MODES))
+    if unknown_modes:
+        raise RuntimeError(f"Unsupported paired-clean null mode(s): {unknown_modes}")
+    if not null_modes:
+        raise RuntimeError("At least one paired-clean null mode is required.")
+    primary_mode = null_modes[0]
     sk = require_sklearn()
-    rows = evaluate_paired_null(frame, main_cols, seeds, sk)
+    rows = evaluate_paired_null(frame, main_cols, seeds, sk, null_modes)
     aggregate = summarize_null(rows)
 
-    primary = aggregate[aggregate["shuffle_mode"].eq(PRIMARY_MODE)].copy()
+    primary = aggregate[aggregate["shuffle_mode"].eq(primary_mode)].copy()
     primary_fixed = primary[primary["threshold_policy"].eq("fixed_0p5")]
     primary_selected = primary[primary["threshold_policy"].eq("validation_selected")]
     primary_fixed_p95 = float(primary_fixed["hm_min_recall_p95"].max()) if not primary_fixed.empty else 1.0
@@ -391,6 +443,12 @@ def main() -> None:
     primary_effective_max = float(primary["effective_shuffle_fraction_max"].max()) if not primary.empty else 1.0
     primary_seed_count = int(primary["seed_count"].min()) if not primary.empty else 0
     primary_seed_block_orientation_max = float(primary["seed_block_max_abs_orientation_sum"].max()) if not primary.empty else 1.0
+    primary_pose_count_orientation_max = (
+        float(primary["seed_block_pose_count_bin_max_abs_orientation_sum"].max()) if not primary.empty else 1.0
+    )
+    primary_full_cell_orientation_max = (
+        float(primary["seed_block_thickness_pose_count_bin_max_abs_orientation_sum"].max()) if not primary.empty else 1.0
+    )
     available_modes = sorted(str(item) for item in aggregate["shuffle_mode"].dropna().unique())
     all_fixed = aggregate[aggregate["threshold_policy"].eq("fixed_0p5")]
     all_selected = aggregate[aggregate["threshold_policy"].eq("validation_selected")]
@@ -401,11 +459,17 @@ def main() -> None:
 
     pass_items = {
         "primary_mode_available": not primary.empty,
-        "all_null_modes_available": set(NULL_MODES).issubset(set(available_modes)),
+        "all_null_modes_available": set(null_modes).issubset(set(available_modes)),
         "shuffle_seed_count": primary_seed_count >= THRESHOLDS["shuffle_seed_count_min"],
         "effective_shuffle_fraction_min_ok": primary_effective_min >= THRESHOLDS["effective_shuffle_fraction_min"],
         "effective_shuffle_fraction_max_ok": primary_effective_max <= THRESHOLDS["effective_shuffle_fraction_max"],
         "seed_block_orientation_balanced": primary_seed_block_orientation_max == 0.0,
+        "strict_pose_count_orientation_balanced": (
+            primary_pose_count_orientation_max == 0.0 if primary_mode == STRICT_POSE_COUNT_MODE else True
+        ),
+        "strict_full_cell_orientation_balanced": (
+            primary_full_cell_orientation_max == 0.0 if primary_mode == STRICT_FULL_CELL_MODE else True
+        ),
         "fixed_threshold_null_p95_under_ceiling": primary_fixed_p95 <= THRESHOLDS["null_hm_min_recall_p95_ceiling"],
         "selected_threshold_null_p95_under_ceiling": primary_selected_p95 <= THRESHOLDS["null_hm_min_recall_p95_ceiling"],
         "fixed_threshold_null_max_under_ceiling": primary_fixed_max <= THRESHOLDS["null_hm_min_recall_single_seed_max"],
@@ -422,6 +486,8 @@ def main() -> None:
         "effective_shuffle_fraction_min_ok": "effective_shuffle_fraction_below_minimum",
         "effective_shuffle_fraction_max_ok": "effective_shuffle_fraction_above_maximum",
         "seed_block_orientation_balanced": "seed_block_orientation_not_balanced",
+        "strict_pose_count_orientation_balanced": "seed_block_pose_count_orientation_not_balanced",
+        "strict_full_cell_orientation_balanced": "seed_block_thickness_pose_count_orientation_not_balanced",
         "fixed_threshold_null_p95_under_ceiling": "fixed_threshold_null_p95_exceeded_ceiling",
         "selected_threshold_null_p95_under_ceiling": "selected_threshold_null_p95_exceeded_ceiling",
         "fixed_threshold_null_max_under_ceiling": "fixed_threshold_null_single_seed_max_exceeded_ceiling",
@@ -446,8 +512,9 @@ def main() -> None:
         "input_dir": args.input_dir,
         "gate_passed": gate_passed,
         "decision": "paired_clean_null_behavior_clean" if gate_passed else "paired_clean_null_behavior_root_cause_needed",
-        "primary_shuffle_mode": PRIMARY_MODE,
-        "required_shuffle_modes": list(NULL_MODES),
+        "primary_shuffle_mode": primary_mode,
+        "required_shuffle_modes": list(null_modes),
+        "supported_shuffle_modes": list(SUPPORTED_NULL_MODES),
         "available_shuffle_modes": available_modes,
         "shuffle_seed_count": int(len(seeds)),
         "main_feature_count": int(len(main_cols)),
@@ -455,6 +522,8 @@ def main() -> None:
         "primary_effective_shuffle_fraction_min": primary_effective_min,
         "primary_effective_shuffle_fraction_max": primary_effective_max,
         "primary_seed_block_orientation_max_abs_sum": primary_seed_block_orientation_max,
+        "primary_seed_block_pose_count_bin_orientation_max_abs_sum": primary_pose_count_orientation_max,
+        "primary_seed_block_thickness_pose_count_bin_orientation_max_abs_sum": primary_full_cell_orientation_max,
         "primary_fixed_threshold_hm_min_recall_p95": primary_fixed_p95,
         "primary_selected_threshold_hm_min_recall_p95": primary_selected_p95,
         "primary_fixed_threshold_hm_min_recall_max": primary_fixed_max,

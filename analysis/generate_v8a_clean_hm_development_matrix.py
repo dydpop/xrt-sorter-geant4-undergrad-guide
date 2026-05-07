@@ -204,6 +204,9 @@ def main() -> None:
     rows: list[dict[str, Any]] = []
     row_index = 0
     count_bins = config["count_target_bins"]
+    pair_replicates_per_cell = int(config.get("pair_replicates_per_cell", 1))
+    if pair_replicates_per_cell < 1:
+        raise RuntimeError("pair_replicates_per_cell must be >= 1.")
     for split, split_config in config["splits"].items():
         for seed_block_config in split_config["seed_blocks"]:
             seed_block = str(seed_block_config["seed_block"])
@@ -213,110 +216,124 @@ def main() -> None:
                     for count_index, count_config in enumerate(count_bins):
                         count_target_bin = str(count_config["count_target_bin"])
                         photons = int(count_config["photons_per_row"])
-                        pair_seed = stable_seed(seed_block_seed, int(float(thickness) * 100), int(pose_index), count_index, 41)
                         nuisance_cell_id = (
                             f"{profile}|{split}|{config['clean_matrix_origin']}|{config['source_family']}|"
                             f"t{float(thickness):g}|p{int(pose_index)}|c{count_target_bin}|{seed_block}"
                         )
-                        clean_pair_id = f"{profile}_{split}_{seed_block}_t{float(thickness):g}_p{int(pose_index)}_c{count_target_bin}"
-                        for material in config["materials"]:
-                            source_energy = float(config["source_energy_kev"])
-                            output_prefix = (
-                                f"{profile}_{split}_{seed_block}_t{float(thickness):g}mm_pose{int(pose_index)}_"
-                                f"count{count_target_bin}_{material}"
+                        for pair_replicate_index in range(pair_replicates_per_cell):
+                            pair_seed = stable_seed(
+                                seed_block_seed,
+                                int(float(thickness) * 100),
+                                int(pose_index),
+                                count_index,
+                                pair_replicate_index,
+                                41,
                             )
-                            phase_rel = Path("phase_space") / f"{output_prefix}.csv"
-                            phase_path = profile_dir / phase_rel
-                            phase_path.parent.mkdir(parents=True, exist_ok=True)
-                            phase_rows = build_clean_phase_space_rows(
-                                peaks_by_material=peaks_by_material,
-                                material=str(material),
-                                thickness_mm=float(thickness),
-                                pose_index=int(pose_index),
-                                pair_seed=int(pair_seed),
-                                source_energy_kev=source_energy,
-                                photons=photons,
+                            replicate_tag = f"r{pair_replicate_index + 1:02d}"
+                            clean_pair_id = (
+                                f"{profile}_{split}_{seed_block}_t{float(thickness):g}_p{int(pose_index)}_"
+                                f"c{count_target_bin}_{replicate_tag}"
                             )
-                            write_phase_space(phase_path, phase_rows)
-                            config_rel = Path("source_models") / "config" / "material_sorting_matrix" / profile / f"{output_prefix}.txt"
-                            write_config(
-                                project_root / config_rel,
-                                {
-                                    "run_id": output_prefix,
-                                    "experiment_label": profile,
-                                    "output_prefix": output_prefix,
-                                    "output_dir": f"material_sorting_runs/{profile}",
-                                    "benchmark_suite": "accuracy_v3",
-                                    "research_route": "v8a_clean_hm_development",
-                                    "prediction_stage": "hm_diffraction_sidecar_clean_sampling",
-                                    "run_role": "material",
-                                    "source_variant": config["source_id"],
-                                    "sample_photons": photons,
-                                    "random_seed": int(pair_seed),
-                                    "source_mode": "phase_space",
-                                    "phase_space_file": phase_rel.as_posix(),
-                                    "source_x_cm": -30.0,
-                                    "source_y_mm": 0.0,
-                                    "source_z_mm": 0.0,
-                                    "dir_x": 1.0,
-                                    "dir_y": 0.0,
-                                    "dir_z": 0.0,
-                                    "ore_material_mode": "single",
-                                    "ore_primary_material": material,
-                                    "ore_shape": "slab",
-                                    "ore_thickness_mm": float(thickness),
-                                    "pose_index": int(pose_index),
-                                    "ore_half_y_mm": 10.0,
-                                    "ore_half_z_mm": 10.0,
-                                    "detector_layout": "transmission_plus_side_scatter",
-                                    "detector_x_cm": 25.0,
-                                    "detector_half_y_mm": 120.0,
-                                    "detector_half_z_mm": 120.0,
-                                    "side_detector_y_cm": 12.0,
-                                    "side_detector_half_x_mm": 140.0,
-                                    "side_detector_half_z_mm": 120.0,
-                                    "clean_matrix_origin": config["clean_matrix_origin"],
-                                    "source_family": config["source_family"],
-                                    "seed_block": seed_block,
-                                    "seed_block_seed": seed_block_seed,
-                                    "count_target_bin": count_target_bin,
-                                    "count_target_photons": photons,
-                                    "clean_pair_id": clean_pair_id,
-                                    "nuisance_cell_id": nuisance_cell_id,
-                                    "stress_label": "default",
-                                },
-                            )
-                            rows.append(
-                                {
-                                    "row_index": row_index,
-                                    "profile": profile,
-                                    "split": split,
-                                    "run_role": "material",
-                                    "material": material,
-                                    "source_id": config["source_id"],
-                                    "source_family": config["source_family"],
-                                    "source_mode": "on",
-                                    "stress_label": "default",
-                                    "clean_matrix_origin": config["clean_matrix_origin"],
-                                    "source_energy_kev": source_energy,
-                                    "thickness_mm": float(thickness),
-                                    "pose_index": int(pose_index),
-                                    "count_target_bin": count_target_bin,
-                                    "count_target_photons": photons,
-                                    "seed_block": seed_block,
-                                    "seed_block_seed": seed_block_seed,
-                                    "random_seed": int(pair_seed),
-                                    "clean_pair_id": clean_pair_id,
-                                    "nuisance_cell_id": nuisance_cell_id,
-                                    "phase_space_file": phase_rel.as_posix(),
-                                    "config_path": config_rel.as_posix(),
-                                    "output_prefix": output_prefix,
-                                    "peak_table_id": peak_table_id,
-                                    "development_only": True,
-                                    "shadow_or_final_used": False,
-                                }
-                            )
-                            row_index += 1
+                            for material in config["materials"]:
+                                source_energy = float(config["source_energy_kev"])
+                                output_prefix = (
+                                    f"{profile}_{split}_{seed_block}_t{float(thickness):g}mm_pose{int(pose_index)}_"
+                                    f"count{count_target_bin}_{replicate_tag}_{material}"
+                                )
+                                phase_rel = Path("phase_space") / f"{output_prefix}.csv"
+                                phase_path = profile_dir / phase_rel
+                                phase_path.parent.mkdir(parents=True, exist_ok=True)
+                                phase_rows = build_clean_phase_space_rows(
+                                    peaks_by_material=peaks_by_material,
+                                    material=str(material),
+                                    thickness_mm=float(thickness),
+                                    pose_index=int(pose_index),
+                                    pair_seed=int(pair_seed),
+                                    source_energy_kev=source_energy,
+                                    photons=photons,
+                                )
+                                write_phase_space(phase_path, phase_rows)
+                                config_rel = Path("source_models") / "config" / "material_sorting_matrix" / profile / f"{output_prefix}.txt"
+                                write_config(
+                                    project_root / config_rel,
+                                    {
+                                        "run_id": output_prefix,
+                                        "experiment_label": profile,
+                                        "output_prefix": output_prefix,
+                                        "output_dir": f"material_sorting_runs/{profile}",
+                                        "benchmark_suite": "accuracy_v3",
+                                        "research_route": "v8a_clean_hm_development",
+                                        "prediction_stage": "hm_diffraction_sidecar_clean_sampling",
+                                        "run_role": "material",
+                                        "source_variant": config["source_id"],
+                                        "sample_photons": photons,
+                                        "random_seed": int(pair_seed),
+                                        "source_mode": "phase_space",
+                                        "phase_space_file": phase_rel.as_posix(),
+                                        "source_x_cm": -30.0,
+                                        "source_y_mm": 0.0,
+                                        "source_z_mm": 0.0,
+                                        "dir_x": 1.0,
+                                        "dir_y": 0.0,
+                                        "dir_z": 0.0,
+                                        "ore_material_mode": "single",
+                                        "ore_primary_material": material,
+                                        "ore_shape": "slab",
+                                        "ore_thickness_mm": float(thickness),
+                                        "pose_index": int(pose_index),
+                                        "ore_half_y_mm": 10.0,
+                                        "ore_half_z_mm": 10.0,
+                                        "detector_layout": "transmission_plus_side_scatter",
+                                        "detector_x_cm": 25.0,
+                                        "detector_half_y_mm": 120.0,
+                                        "detector_half_z_mm": 120.0,
+                                        "side_detector_y_cm": 12.0,
+                                        "side_detector_half_x_mm": 140.0,
+                                        "side_detector_half_z_mm": 120.0,
+                                        "clean_matrix_origin": config["clean_matrix_origin"],
+                                        "source_family": config["source_family"],
+                                        "seed_block": seed_block,
+                                        "seed_block_seed": seed_block_seed,
+                                        "count_target_bin": count_target_bin,
+                                        "count_target_photons": photons,
+                                        "clean_pair_id": clean_pair_id,
+                                        "nuisance_cell_id": nuisance_cell_id,
+                                        "pair_replicate_index": pair_replicate_index + 1,
+                                        "stress_label": "default",
+                                    },
+                                )
+                                rows.append(
+                                    {
+                                        "row_index": row_index,
+                                        "profile": profile,
+                                        "split": split,
+                                        "run_role": "material",
+                                        "material": material,
+                                        "source_id": config["source_id"],
+                                        "source_family": config["source_family"],
+                                        "source_mode": "on",
+                                        "stress_label": "default",
+                                        "clean_matrix_origin": config["clean_matrix_origin"],
+                                        "source_energy_kev": source_energy,
+                                        "thickness_mm": float(thickness),
+                                        "pose_index": int(pose_index),
+                                        "count_target_bin": count_target_bin,
+                                        "count_target_photons": photons,
+                                        "seed_block": seed_block,
+                                        "seed_block_seed": seed_block_seed,
+                                        "random_seed": int(pair_seed),
+                                        "clean_pair_id": clean_pair_id,
+                                        "nuisance_cell_id": nuisance_cell_id,
+                                        "pair_replicate_index": pair_replicate_index + 1,
+                                        "phase_space_file": phase_rel.as_posix(),
+                                        "config_path": config_rel.as_posix(),
+                                        "output_prefix": output_prefix,
+                                        "peak_table_id": peak_table_id,
+                                        "development_only": True,
+                                        "shadow_or_final_used": False,
+                                    }
+                                )
+                                row_index += 1
 
     expected_total = int(config["expected_rows"]["total"])
     if len(rows) != expected_total:
@@ -347,6 +364,7 @@ def main() -> None:
         "expected_rows": config["expected_rows"],
         "expected_strict_pairs": config["expected_strict_pairs"],
         "minimum_strict_pairs": config["minimum_strict_pairs"],
+        "pair_replicates_per_cell": pair_replicates_per_cell,
         "source_energy_kev": float(config["source_energy_kev"]),
         "count_target_bins": config["count_target_bins"],
         "development_run_unlock_conditions": config["development_run_unlock_conditions"],

@@ -1,0 +1,130 @@
+{
+  "config_id": "v8a_clean_hm_fullcell_nullrep_matrix_config",
+  "version": "2026-05-07",
+  "status": "development_preregistration",
+  "claim_scope": "H/M development-only clean full-cell null replication preregistration; source-on default diffraction sidecar only; not training evidence, product accuracy, hardware validation, shadow/final validation, full ten-material matrix, or manuscript-grade powder XRD",
+  "profile": "v8a_hm_clean_fullcell_nullrep_cif_lit",
+  "peak_manifest": "source_models/config/diffraction_peak_tables/hm_powder_peaks_cif_or_literature_v8a_manifest.json",
+  "required_peak_table_id": "hm_powder_peaks_cif_or_literature_v8a",
+  "source_energy_kev": 35.0,
+  "clean_matrix_origin": "clean_hm_default_single_origin_fullcell_null_support_v1",
+  "source_family": "custom_diffraction_on_default_phase_space_v1",
+  "source_id": "v8a_clean_fullcell_null_support_default_35kev",
+  "materials": ["Hematite", "Magnetite"],
+  "thickness_mm": [3.0, 10.0, 30.0, 60.0],
+  "pose_indices": [0, 1, 2],
+  "count_target_bins": [
+    {"count_target_bin": "low", "photons_per_row": 3600},
+    {"count_target_bin": "nominal", "photons_per_row": 4000},
+    {"count_target_bin": "high", "photons_per_row": 4400}
+  ],
+  "pair_replicates_per_cell": 2,
+  "source_modes": [
+    {"source_mode": "on", "stress_label": "default"}
+  ],
+  "splits": {
+    "train": {
+      "seed_blocks": [
+        {"seed_block": "tr_fc_a", "seed": 8701},
+        {"seed_block": "tr_fc_b", "seed": 8702},
+        {"seed_block": "tr_fc_c", "seed": 8703},
+        {"seed_block": "tr_fc_d", "seed": 8704},
+        {"seed_block": "tr_fc_e", "seed": 8705},
+        {"seed_block": "tr_fc_f", "seed": 8706}
+      ]
+    },
+    "validation": {
+      "seed_blocks": [
+        {"seed_block": "va_fc_a", "seed": 8801},
+        {"seed_block": "va_fc_b", "seed": 8802},
+        {"seed_block": "va_fc_c", "seed": 8803},
+        {"seed_block": "va_fc_d", "seed": 8804}
+      ]
+    },
+    "stress_holdout": {
+      "seed_blocks": [
+        {"seed_block": "ho_fc_a", "seed": 8901},
+        {"seed_block": "ho_fc_b", "seed": 8902},
+        {"seed_block": "ho_fc_c", "seed": 8903},
+        {"seed_block": "ho_fc_d", "seed": 8904}
+      ]
+    }
+  },
+  "strict_match_cell_keys": [
+    "split",
+    "clean_matrix_origin",
+    "source_family",
+    "thickness_mm",
+    "pose_index",
+    "count_target_bin",
+    "seed_block"
+  ],
+  "expected_strict_pairs": {
+    "train": 432,
+    "validation": 288,
+    "stress_holdout": 288,
+    "total": 1008
+  },
+  "minimum_strict_pairs": {
+    "train": 400,
+    "validation": 250,
+    "stress_holdout": 250
+  },
+  "expected_rows": {
+    "train": 864,
+    "validation": 576,
+    "stress_holdout": 576,
+    "total": 2016
+  },
+  "replication_intent": {
+    "reason": "Make every split/seed-block/thickness/pose/count-bin nuisance cell contain two H/M pairs so the strict full-cell null orientation can be exactly zero-sum.",
+    "previous_clean_pairs": {
+      "train": 216,
+      "validation": 144,
+      "stress_holdout": 144
+    },
+    "new_clean_pairs": {
+      "train": 432,
+      "validation": 288,
+      "stress_holdout": 288
+    },
+    "not_a_large_development_matrix": true,
+    "no_model_training_unlocked": true,
+    "strict_full_cell_null_orientation_mode": "seed_block_thickness_pose_count_strict_balanced_orientation"
+  },
+  "hard_guards": {
+    "development_only": true,
+    "shadow_or_final_used": false,
+    "full_ten_material_matrix": false,
+    "source_on_default_only": true,
+    "stress_variants_excluded": true,
+    "source_off_excluded": true,
+    "single_clean_origin_training_view": true,
+    "requires_peak_provenance_gate_passed": true,
+    "requires_no_existing_xrt_cube_reads": true,
+    "requires_seed_block_split_separation": true,
+    "requires_cell_level_hm_pairing": true,
+    "requires_even_pair_replicates_per_full_nuisance_cell": true,
+    "preserve_physical_crystal_signal": true,
+    "shuffle_only_for_null_audit_not_for_real_training_view": true
+  },
+  "development_run_unlock_conditions": [
+    "clean full-cell null replication matrix generator completed without Geant4 execution",
+    "preflight audit passes all matrix integrity checks",
+    "H/M are paired inside every strict nuisance cell",
+    "each split seed-block thickness pose count-bin cell has two H/M pairs",
+    "train validation and stress_holdout seed blocks are disjoint",
+    "only source-on default rows are present",
+    "no stress variants and no source-off rows are present",
+    "no shadow/final flags and no full ten-material matrix flags are present"
+  ],
+  "training_unlock_conditions": [
+    "development-only Geant4 clean full-cell null replication run completed after preflight",
+    "event-to-feature schema gate passes on clean outputs",
+    "non-material shortcut gate passes",
+    "strict full-cell paired-clean null gate passes",
+    "threshold-free null gate passes",
+    "crystal-clean admission gate sets training_unlocked true",
+    "no material/source_id/sample_id/seed/thickness/pose/split/origin/path/row_index/count_target_bin leakage in main features"
+  ]
+}

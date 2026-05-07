@@ -139,6 +139,9 @@ def main() -> None:
     main_cols, _, _, _, _ = feature_sets(frame)
     counts = pair_counts(frame)
     lineage_like = leakage_like_main_features(main_cols)
+    diagnostic_only_candidate = bool(manifest.get("diagnostic_only_candidate", False)) or bool(
+        schema_gate.get("diagnostic_only_candidate", False)
+    )
     max_nonmaterial = float(shortcut_gate.get("max_nonmaterial_balanced_accuracy", 1.0))
     null_protocol = str(null_gate.get("protocol_name", ""))
     paired_null_protocol = null_protocol == "v8A_paired_clean_null_behavior_diagnosis"
@@ -158,6 +161,7 @@ def main() -> None:
         "view_schema_gate_passed": bool(schema_gate.get("gate_passed", False)),
         "view_training_not_preunlocked": not bool(schema_gate.get("training_unlocked", False)),
         "manifest_training_not_preunlocked": not bool(manifest.get("training_unlocked", False)),
+        "not_diagnostic_only_candidate": not diagnostic_only_candidate,
         "development_only": bool(schema_gate.get("development_only", False)) and bool(manifest.get("development_only", False)),
         "no_shadow_final": not bool(schema_gate.get("shadow_or_final_used", False)) and not bool(manifest.get("shadow_or_final_used", False)),
         "no_existing_xrt_cube_reads": not bool(schema_gate.get("reads_existing_xrt_cubes", False)) and not bool(manifest.get("reads_existing_xrt_cubes", False)),
@@ -190,6 +194,7 @@ def main() -> None:
         "view_schema_gate_passed": "view_schema_gate_failed",
         "view_training_not_preunlocked": "view_training_was_preunlocked",
         "manifest_training_not_preunlocked": "manifest_training_was_preunlocked",
+        "not_diagnostic_only_candidate": "diagnostic_only_candidate_cannot_unlock_training",
         "development_only": "development_only_false",
         "no_shadow_final": "shadow_or_final_detected",
         "no_existing_xrt_cube_reads": "existing_xrt_cube_reads_detected",
@@ -229,6 +234,7 @@ def main() -> None:
         "null_gate_protocol": null_protocol,
         "paired_null_protocol": paired_null_protocol,
         "main_feature_count": int(len(main_cols)),
+        "diagnostic_only_candidate": diagnostic_only_candidate,
         "lineage_like_main_features": lineage_like,
         "max_nonmaterial_balanced_accuracy": max_nonmaterial,
         "fixed_threshold_null_hm_gate_value": fixed_gate_value,

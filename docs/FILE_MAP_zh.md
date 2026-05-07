@@ -419,3 +419,27 @@ crystal-clean view using the same paired-clean null protocol. The first run foun
 up to `0.0617` over source-scaled features, and higher-order orientation balance
 shows max abs sum `3.0`. Training remains locked pending residualization protocol
 rework and stricter high-order paired-null orientation.
+
+The full-cell clean admission report is:
+
+- `docs/ACCURACY_SPRINT_V8A_FULLCELL_CLEAN_ADMISSION_REPORT_zh.md`
+
+Its source-controlled config/scripts are:
+
+- `analysis/configs/v8a_clean_hm_fullcell_nullrep_matrix_config.json`
+- `analysis/generate_v8a_clean_hm_development_matrix.py`
+- `analysis/run_material_sorting_matrix_parallel.py`
+- `analysis/build_v8a_residualization_protocol_rework_v1_views.py`
+- `analysis/diagnose_v8a_paired_clean_null_behavior.py`
+- `analysis/audit_v8a_threshold_free_null_protocol.py`
+- `analysis/audit_v8a_crystal_clean_admission.py`
+
+This stage fixes the clean matrix at the source by adding two H/M pairs inside
+each `seed_block × thickness × pose × count_bin` cell, allowing strict full-cell
+paired-null orientation. The admitted candidate is source-scaled with no
+residualization. Gates passed: preflight `2016` rows, Geant4 `2016/2016` with
+`0` failures, non-material shortcut max BA `0.3681`, paired-null p95 `0.5248`,
+threshold-free AUC p95 `0.5540`, and admission `training_unlocked=true`.
+This unlocks development-only model diagnostics only; shadow/final, full
+ten-material v8A, product accuracy, hardware validation, and manuscript-grade
+powder-XRD claims remain locked.
